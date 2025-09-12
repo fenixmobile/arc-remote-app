@@ -41,22 +41,16 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		41A4DC272E6EF96000BD65C0 /* roku-app */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "roku-app";
 			sourceTree = "<group>";
 		};
 		41A4DC362E6EF96100BD65C0 /* roku-appTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "roku-appTests";
 			sourceTree = "<group>";
 		};
 		41A4DC402E6EF96100BD65C0 /* roku-appUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "roku-appUITests";
 			sourceTree = "<group>";
 		};
@@ -295,9 +289,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-roku-app/Pods-roku-app-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-roku-app/Pods-roku-app-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
