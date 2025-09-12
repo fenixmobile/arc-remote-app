@@ -1,0 +1,103 @@
+# Roku App - Smart TV Remote Control
+
+## Code Style Rules
+
+### Comments
+- **NO COMMENTS** - Do not add explanatory comments in code
+- Code should be self-explanatory through clear variable names and structure
+- Only add comments if absolutely necessary for complex business logic
+- Remove any existing comments that are not essential
+
+### Swift Code Standards
+- Use clear, descriptive variable and function names
+- Prefer `guard` statements for early returns
+- Use `async/await` for asynchronous operations
+- Follow Swift naming conventions (camelCase for variables, PascalCase for types)
+- Use `private` access control when appropriate
+
+### TV Service Implementation
+- Each TV brand should have its own service class extending `BaseTVService`
+- Use appropriate protocols (HTTP for Roku, WebSocket for Samsung)
+- Implement proper error handling with `TVServiceError` enum
+- Use `@Published` properties for UI state management
+- Store connected services in `TVServiceManager` for reuse
+
+### Network Operations
+- Use `URLSession` for HTTP requests
+- Use `URLSessionWebSocketTask` for WebSocket connections
+- Implement proper timeout handling
+- Add retry logic for failed connections
+- Use `DispatchQueue.main.async` for UI updates
+
+### Error Handling
+- Use `TVServiceError` enum for consistent error types
+- Log errors with descriptive messages
+- Implement graceful fallbacks where possible
+- Don't expose internal implementation details in error messages
+
+### UI Guidelines
+- Use `ObservableObject` for ViewModels
+- Bind UI elements to `@Published` properties
+- Use `@objc` methods for button actions
+- Implement proper loading states
+- Add debug prints for troubleshooting (remove in production)
+
+### File Organization
+- Keep services in `Services/` directory
+- Keep views in `Views/` directory
+- Keep models in `Models/` directory
+- Keep utilities in `Utils/` directory
+- Use meaningful file names that describe their purpose
+
+### Performance
+- Reuse service instances when possible
+- Implement proper connection pooling
+- Use background queues for network operations
+- Avoid blocking the main thread
+- Implement proper cleanup in `disconnect()` methods
+
+### Testing
+- Add debug prints for key operations
+- Test with real TV devices when possible
+- Implement proper connection state management
+- Handle network interruptions gracefully
+
+## Project Structure
+```
+roku-app/
+├── Services/
+│   ├── TVServiceManager.swift
+│   ├── BaseTVService.swift
+│   ├── RokuTVService.swift
+│   ├── SamsungTVService.swift
+│   └── [Other TV Services]
+├── Views/
+│   ├── DeviceDiscoveryViewController.swift
+│   ├── TVRemoteViewController.swift
+│   └── MainTabBarController.swift
+├── Models/
+│   ├── TVDevice.swift
+│   ├── TVBrand.swift
+│   └── TVLog.swift
+├── Protocols/
+│   └── TVServiceProtocol.swift
+├── Utils/
+│   └── LogService.swift
+└── ViewModels/
+    └── TVRemoteViewModel.swift
+```
+
+## Key Features
+- Multi-brand TV support (Roku, Samsung, LG, Sony, etc.)
+- Network discovery using Bonjour/mDNS and SSDP
+- Real-time remote control commands
+- Connection state management
+- Error handling and logging
+- Modern SwiftUI/UIKit hybrid approach
+
+## Remember
+- **NO COMMENTS** - Write self-documenting code
+- Focus on clean, readable code structure
+- Use meaningful names instead of comments
+- Keep functions small and focused
+- Implement proper error handling

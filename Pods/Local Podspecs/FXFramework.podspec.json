@@ -1,0 +1,31 @@
+{
+  "name": "FXFramework",
+  "version": "0.2.11",
+  "summary": "common codes for FX projects",
+  "description": "TODO: Add long description of the pod here.",
+  "homepage": "https://github.com/fenixmobile/fxframework",
+  "license": {
+    "type": "MIT",
+    "file": "LICENSE"
+  },
+  "authors": {
+    "savassalihoglufenix": "savas@fenixmobile.com"
+  },
+  "source": {
+    "git": "https://github.com/fenixmobile/fxframework.git",
+    "tag": "0.2.11"
+  },
+  "platforms": {
+    "ios": "13.0"
+  },
+  "source_files": "Classes/**/*",
+  "static_framework": true,
+  "dependencies": {
+    "AmplitudeSwift": [],
+    "Adjust": [],
+    "FirebaseCrashlytics": [],
+    "FirebaseAnalytics": [],
+    "FBSDKCoreKit": [],
+    "Adapty": []
+  }
+}

@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1C685827401ABD703006AB35 /* Pods_roku_app.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BC3B486BF874E3F7AFF3C3A4 /* Pods_roku_app.framework */; };
+		41A4DC992E6F003500BD65C0 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 41A4DC982E6F003500BD65C0 /* StoreKit.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		41A4DC342E6EF96100BD65C0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,21 +32,31 @@
 		41A4DC252E6EF96000BD65C0 /* roku-app.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "roku-app.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		41A4DC332E6EF96100BD65C0 /* roku-appTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "roku-appTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		41A4DC3D2E6EF96100BD65C0 /* roku-appUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "roku-appUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		41A4DC982E6F003500BD65C0 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		BA9DD01D05BC6D29196FC064 /* Pods-roku-app.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-roku-app.debug.xcconfig"; path = "Target Support Files/Pods-roku-app/Pods-roku-app.debug.xcconfig"; sourceTree = "<group>"; };
+		BC3B486BF874E3F7AFF3C3A4 /* Pods_roku_app.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_roku_app.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F932B614E6D452A8F5F59104 /* Pods-roku-app.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-roku-app.release.xcconfig"; path = "Target Support Files/Pods-roku-app/Pods-roku-app.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		41A4DC272E6EF96000BD65C0 /* roku-app */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "roku-app";
 			sourceTree = "<group>";
 		};
 		41A4DC362E6EF96100BD65C0 /* roku-appTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "roku-appTests";
 			sourceTree = "<group>";
 		};
 		41A4DC402E6EF96100BD65C0 /* roku-appUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "roku-appUITests";
 			sourceTree = "<group>";
 		};
@@ -52,6 +67,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C685827401ABD703006AB35 /* Pods_roku_app.framework in Frameworks */,
+				41A4DC992E6F003500BD65C0 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +96,8 @@
 				41A4DC362E6EF96100BD65C0 /* roku-appTests */,
 				41A4DC402E6EF96100BD65C0 /* roku-appUITests */,
 				41A4DC262E6EF96000BD65C0 /* Products */,
+				B3CB87536A67FCAF55745C95 /* Pods */,
+				48C59266F18F442404C8A7E1 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -92,6 +111,24 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		48C59266F18F442404C8A7E1 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				41A4DC982E6F003500BD65C0 /* StoreKit.framework */,
+				BC3B486BF874E3F7AFF3C3A4 /* Pods_roku_app.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		B3CB87536A67FCAF55745C95 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				BA9DD01D05BC6D29196FC064 /* Pods-roku-app.debug.xcconfig */,
+				F932B614E6D452A8F5F59104 /* Pods-roku-app.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -99,9 +136,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 41A4DC472E6EF96100BD65C0 /* Build configuration list for PBXNativeTarget "roku-app" */;
 			buildPhases = (
+				14F5AC79729035880C8EE0DB /* [CP] Check Pods Manifest.lock */,
 				41A4DC212E6EF96000BD65C0 /* Sources */,
 				41A4DC222E6EF96000BD65C0 /* Frameworks */,
 				41A4DC232E6EF96000BD65C0 /* Resources */,
+				B800FE936338F39DDE1B3A50 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -111,8 +150,6 @@
 				41A4DC272E6EF96000BD65C0 /* roku-app */,
 			);
 			name = "roku-app";
-			packageProductDependencies = (
-			);
 			productName = "roku-app";
 			productReference = 41A4DC252E6EF96000BD65C0 /* roku-app.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +171,6 @@
 				41A4DC362E6EF96100BD65C0 /* roku-appTests */,
 			);
 			name = "roku-appTests";
-			packageProductDependencies = (
-			);
 			productName = "roku-appTests";
 			productReference = 41A4DC332E6EF96100BD65C0 /* roku-appTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,8 +192,6 @@
 				41A4DC402E6EF96100BD65C0 /* roku-appUITests */,
 			);
 			name = "roku-appUITests";
-			packageProductDependencies = (
-			);
 			productName = "roku-appUITests";
 			productReference = 41A4DC3D2E6EF96100BD65C0 /* roku-appUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -230,6 +263,48 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		14F5AC79729035880C8EE0DB /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-roku-app-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		B800FE936338F39DDE1B3A50 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-roku-app/Pods-roku-app-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-roku-app/Pods-roku-app-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-roku-app/Pods-roku-app-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		41A4DC212E6EF96000BD65C0 /* Sources */ = {
@@ -307,7 +382,7 @@
 				DEVELOPMENT_TEAM = 6Z2A2ZVSJM;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -369,7 +444,7 @@
 				DEVELOPMENT_TEAM = 6Z2A2ZVSJM;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -387,6 +462,7 @@
 		};
 		41A4DC482E6EF96100BD65C0 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BA9DD01D05BC6D29196FC064 /* Pods-roku-app.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -397,35 +473,35 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "fenixmobile.rmt1.test.roku-app";
+				PRODUCT_BUNDLE_IDENTIFIER = fenixmobile.rmt1.test;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Debug;
 		};
 		41A4DC492E6EF96100BD65C0 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F932B614E6D452A8F5F59104 /* Pods-roku-app.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -436,29 +512,28 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "fenixmobile.rmt1.test.roku-app";
+				PRODUCT_BUNDLE_IDENTIFIER = fenixmobile.rmt1.test;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Release;
