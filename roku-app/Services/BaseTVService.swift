@@ -7,10 +7,28 @@
 
 import Foundation
 
+enum TVServiceState {
+    case connected
+    case notConnected
+    case pendingPermission
+    case rejected
+    case pinRequested
+    case pinWrong
+    case connectionFailed
+}
+
+protocol TVServicePinListener {
+    func onPinRequested()
+    func onPinWrong()
+    func onPinAccepted()
+}
+
 class BaseTVService: NSObject, TVServiceProtocol {
     var device: TVDevice
     var isConnected: Bool = false
     weak var delegate: TVServiceDelegate?
+    var tvServiceStateListener: ((TVServiceState, TVServicePinListener?) -> Void)?
+    var storedConectedDevice: TVDevice?
     
     init(device: TVDevice) {
         self.device = device

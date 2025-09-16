@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 enum TVBrand: String, CaseIterable, Codable {
     case roku = "Roku TV"
@@ -26,31 +27,35 @@ enum TVBrand: String, CaseIterable, Codable {
     }
     
     var iconName: String {
+        return "\(self.rawValue.lowercased().replacingOccurrences(of: " ", with: ""))-cell"
+    }
+    
+    var tintColor: UIColor {
         switch self {
         case .roku:
-            return "tv.fill"
+            return .systemPurple
         case .fireTV:
-            return "flame.fill"
+            return .systemOrange
         case .samsung:
-            return "s.circle.fill"
+            return .systemBlue
         case .sony:
-            return "s.circle.fill"
+            return .systemBlue
         case .tcl:
-            return "t.circle.fill"
+            return .systemGray
         case .lg:
-            return "l.circle.fill"
+            return .systemRed
         case .philipsAndroid:
-            return "p.circle.fill"
+            return .systemYellow
         case .philips:
-            return "p.circle.fill"
+            return .systemYellow
         case .vizio:
-            return "v.circle.fill"
+            return .systemGreen
         case .androidTV:
-            return "android"
+            return .systemGreen
         case .toshiba:
-            return "t.circle.fill"
+            return .systemGray
         case .panasonic:
-            return "p.circle.fill"
+            return .systemBlue
         }
     }
     

@@ -57,8 +57,8 @@ class TVServiceManager: ObservableObject {
 
         startSSDPDiscovery()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            self.stopDiscovery()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            self?.stopDiscovery()
         }
     }
 
@@ -85,7 +85,7 @@ class TVServiceManager: ObservableObject {
             client.delegate = self
             ssdpClients.append(client)
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.2) { [weak self] in
                 client.discoverService(forDuration: 3, searchTarget: target)
             }
         }
@@ -259,6 +259,9 @@ extension TVServiceManager: SSDPDiscoveryDelegate {
     private func getDeviceInfo(urlStr: String, host: String) {
         guard let url = URL(string: urlStr) else { return }
         
+        let port = url.port ?? 8080
+        
+        
         var urlRequest = URLRequest(url: url)
         urlRequest.timeoutInterval = 3
         urlRequest.httpMethod = "GET"
@@ -266,7 +269,7 @@ extension TVServiceManager: SSDPDiscoveryDelegate {
         URLSession.shared.dataTask(with: urlRequest) { [weak self] data, response, error in
             if let data = data {
                 if let response: SharedTVDTO = self?.decode(data) {
-                    self?.addDevice(sharedTVDTO: response, host: host)
+                    self?.addDevice(sharedTVDTO: response, host: host, port: port)
                 }
             }
         }.resume()
@@ -337,7 +340,7 @@ extension TVServiceManager: SSDPDiscoveryDelegate {
         }
     }
     
-    private func addDevice(sharedTVDTO: SharedTVDTO, host: String) {
+    private func addDevice(sharedTVDTO: SharedTVDTO, host: String, port: Int = 8080) {
         guard let manufacturer = sharedTVDTO.device?.manufacturer?.lowercased() else { return }
         guard let modelName = sharedTVDTO.device?.modelName?.lowercased() else { return }
         
@@ -373,34 +376,27 @@ extension TVServiceManager: SSDPDiscoveryDelegate {
             return
         }
         
-        // Brand'a göre daha anlamlı isim oluştur
         let finalDeviceName: String
         if deviceName == "Unknown Device" {
-            switch brand {
-            case .samsung:
-                finalDeviceName = "Samsung TV"
-            case .roku:
-                finalDeviceName = "Roku TV"
-            case .fireTV:
-                finalDeviceName = "Fire TV"
-            case .sony:
-                finalDeviceName = "Sony TV"
-            case .lg:
-                finalDeviceName = "LG TV"
-            case .tcl:
-                finalDeviceName = "TCL TV"
-            case .vizio:
-                finalDeviceName = "Vizio TV"
-            case .androidTV:
-                finalDeviceName = "Android TV"
-            case .toshiba:
-                finalDeviceName = "Toshiba TV"
-            case .panasonic:
-                finalDeviceName = "Panasonic TV"
-            case .philips:
-                finalDeviceName = "Philips TV"
-            case .philipsAndroid:
-                finalDeviceName = "Philips Android TV"
+            let friendlyName = sharedTVDTO.device?.friendlyName ?? ""
+            let modelName = sharedTVDTO.device?.modelName ?? ""
+            let modelNumber = sharedTVDTO.device?.modelNumber ?? ""
+            let brandName = brand.displayName
+            
+            if !friendlyName.isEmpty {
+                finalDeviceName = friendlyName
+            } else if !modelName.isEmpty {
+                if brand == .samsung && !modelNumber.isEmpty {
+                    finalDeviceName = "\(brandName) \(modelName) \(modelNumber) TV"
+                } else if brand == .roku || brand == .androidTV {
+                    finalDeviceName = modelName
+                } else if brand == .philipsAndroid {
+                    finalDeviceName = "\(brandName) \(modelName)"
+                } else {
+                    finalDeviceName = "\(brandName) \(modelName)"
+                }
+            } else {
+                finalDeviceName = "\(brandName) TV"
             }
         } else {
             finalDeviceName = deviceName
@@ -410,7 +406,7 @@ extension TVServiceManager: SSDPDiscoveryDelegate {
             name: finalDeviceName,
             brand: brand,
             ipAddress: host,
-            port: 8080
+            port: port
         )
         
         
@@ -432,6 +428,7 @@ struct SharedTVDTO: Codable {
 struct DeviceInfo: Codable {
     let udn: String?
     let friendlyDeviceName: String?
+    let friendlyName: String?
     let manufacturer: String?
     let modelName: String?
     let modelNumber: String?
@@ -513,6 +510,46 @@ extension TVServiceManager {
         }
         
         try await service.sendCommand(command)
+    }
+    
+    func getStoredConnectedTVService() -> TVServiceProtocol? {
+        guard let device = currentDevice else { return nil }
+        
+        switch device.brand {
+        case .roku, .tcl:
+            return RokuTVService(device: device)
+        case .fireTV:
+            return FireTVService(device: device)
+        case .samsung:
+            return SamsungTVService(device: device)
+        case .sony:
+            return SonyTVService(device: device)
+        case .lg:
+            return LGTVService(device: device)
+        case .philipsAndroid:
+            return PhilipsAndroidTVService(device: device)
+        case .philips:
+            return PhilipsTVService(device: device)
+        case .vizio:
+            return VizioTVService(device: device)
+        case .androidTV:
+            return AndroidTVService(device: device)
+        case .toshiba:
+            return ToshibaTVService(device: device)
+        case .panasonic:
+            return PanasonicTVService(device: device)
+        }
+    }
+    
+    func connectToStoredDevice() {
+        guard let device = currentDevice else { return }
+        Task {
+            do {
+                try await connectToDevice(&currentDevice!)
+            } catch {
+                print("Failed to connect to stored device: \(error)")
+            }
+        }
     }
 }
 

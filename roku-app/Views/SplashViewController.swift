@@ -64,8 +64,8 @@ class SplashViewController: UIViewController {
         setupConstraints()
         startAnimation()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            self.navigateToMainApp()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.navigateToMainApp()
         }
     }
     

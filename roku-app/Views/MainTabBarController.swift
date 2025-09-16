@@ -9,58 +9,51 @@ import UIKit
 
 class MainTabBarController: UITabBarController {
     
+    lazy var lineView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.layer.masksToBounds = true
+        view.backgroundColor = UIColor(named: "tabbar.line")
+        return view
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        print("🔍 MainTabBarController: viewDidLoad çağrıldı")
-        setupTabBar()
+        setupTabBarConstraints()
         setupViewControllers()
-        print("🔍 MainTabBarController: Tab'lar oluşturuldu, seçili tab: \(selectedIndex)")
-        print("🔍 MainTabBarController: ViewControllers sayısı: \(viewControllers?.count ?? 0)")
     }
     
-    private func setupTabBar() {
-        tabBar.backgroundColor = .systemBackground
-        tabBar.tintColor = .systemBlue
-        tabBar.unselectedItemTintColor = .systemGray
+    private func setupTabBarConstraints() {
+        tabBar.addSubview(lineView)
+        
+        NSLayoutConstraint.activate([
+            lineView.heightAnchor.constraint(equalToConstant: 1),
+            lineView.bottomAnchor.constraint(equalTo: tabBar.topAnchor, constant: -1),
+            lineView.leadingAnchor.constraint(equalTo: tabBar.leadingAnchor),
+            lineView.trailingAnchor.constraint(equalTo: tabBar.trailingAnchor),
+        ])
     }
     
     private func setupViewControllers() {
-        print("🔍 MainTabBarController: setupViewControllers çağrıldı")
-        
-        // Remote Control Tab
-        print("🔍 MainTabBarController: TVRemoteViewController oluşturuluyor")
         let remoteViewController = TVRemoteViewController()
-        print("🔍 MainTabBarController: TVRemoteViewController oluşturuldu: \(remoteViewController)")
-        let remoteNavController = UINavigationController(rootViewController: remoteViewController)
-        remoteNavController.tabBarItem = UITabBarItem(
-            title: "Remote",
-            image: UIImage(systemName: "tv"),
-            selectedImage: UIImage(systemName: "tv.fill")
-        )
-        print("🔍 MainTabBarController: Remote tab oluşturuldu")
-        
-        // Device Discovery Tab
-        let discoveryViewController = DeviceDiscoveryViewController()
-        let discoveryNavController = UINavigationController(rootViewController: discoveryViewController)
-        discoveryNavController.tabBarItem = UITabBarItem(
-            title: "Devices",
-            image: UIImage(systemName: "magnifyingglass"),
-            selectedImage: UIImage(systemName: "magnifyingglass")
-        )
-        print("🔍 MainTabBarController: Devices tab oluşturuldu")
-        
-        // Settings Tab
         let settingsViewController = SettingsViewController()
-        let settingsNavController = UINavigationController(rootViewController: settingsViewController)
-        settingsNavController.tabBarItem = UITabBarItem(
-            title: "Settings",
-            image: UIImage(systemName: "gear"),
-            selectedImage: UIImage(systemName: "gear.fill")
-        )
-        print("🔍 MainTabBarController: Settings tab oluşturuldu")
         
-        viewControllers = [remoteNavController, discoveryNavController, settingsNavController]
-        print("🔍 MainTabBarController: ViewControllers ayarlandı")
+        let viewControllers = [remoteViewController, settingsViewController]
+        tabBar.accessibilityIdentifier = "main_tab_bar"
+        
+        remoteViewController.tabBarItem = UITabBarItem(title: "Remote", image: UIImage(named: "1"), tag: 0)
+        remoteViewController.tabBarItem.accessibilityIdentifier = "tab_main"
+        
+        settingsViewController.tabBarItem = UITabBarItem(title: "Settings", image: UIImage(named: "3"), tag: 1)
+        settingsViewController.tabBarItem.accessibilityIdentifier = "tab_settings"
+        
+        self.viewControllers = viewControllers
+        
+        tabBar.backgroundColor = UIColor(named: "tabbar")
+        tabBar.layer.zPosition = 1
+        tabBar.tintColor = .white
+        tabBar.unselectedItemTintColor = .gray
+        tabBar.itemWidth = 100
     }
 }
 
