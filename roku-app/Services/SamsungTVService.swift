@@ -15,7 +15,18 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
     
     override init(device: TVDevice) {
         super.init(device: device)
-        urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: OperationQueue())
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 60
+        config.timeoutIntervalForResource = 120
+        
+        config.urlCredentialStorage = nil
+        config.httpCookieStorage = nil
+        
+        urlSession = URLSession(configuration: config, delegate: self, delegateQueue: OperationQueue())
+        
+        delegate = TVServiceManager.shared
+        print("🔗 SamsungTVService: delegate TVServiceManager'a set edildi")
     }
     
     func setDeviceToken(_ token: String, deviceId: String) {
@@ -40,37 +51,53 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         
         if let token = existingToken, !token.isEmpty {
             print("🔑 Mevcut token ile bağlantı kuruluyor: \(token)")
-            try await connectWithToken(token)
-        } else {
-            print("🔑 Token yok, önce token alınıyor...")
-            try await connectToGetToken()
+            do {
+                try await connectWithToken(token)
+                return
+            } catch {
+                print("❌ Token ile bağlantı başarısız, token'ı temizleyip yeniden deniyor: \(error)")
+                setDeviceToken("", deviceId: device.id.uuidString)
+            }
         }
+        
+        print("🔑 Token yok veya geçersiz, önce token alınıyor...")
+        try await connectToGetToken()
     }
     
     private func connectToGetToken() async throws {
+        print("🔍 Samsung TV Token alma süreci başladı: \(device.ipAddress)")
+        print("📱 Base64 App Name: \(base64AppName)")
+        
+        try await wakeUpSamsungTV()
+        
         let ports = [8002, 8001, 8080, 55000]
         
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         
         for port in ports {
+            print("🌐 Samsung TV Port \(port) için WebSocket bağlantısı kuruluyor...")
+            
             let webSocketURL = createWebSocketURL(token: "", port: port)
             print("🌐 Samsung TV Token alma URL denemesi: \(webSocketURL)")
             
             do {
                 var urlRequest = URLRequest(url: webSocketURL)
                 urlRequest.networkServiceType = .responsiveData
-                urlRequest.timeoutInterval = 30
+                urlRequest.timeoutInterval = 60
                 
                 webSocketTask = urlSession?.webSocketTask(with: urlRequest)
                 webSocketTask?.resume()
                 
+                print("📱 Samsung TV WebSocket bağlantısı başlatıldı. TV'de izin popup'ı çıkmalı!")
+                
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                     var hasResumed = false
                     
-                    let timeout = DispatchTime.now() + .seconds(30)
+                    let timeout = DispatchTime.now() + .seconds(60)
                     DispatchQueue.global().asyncAfter(deadline: timeout) {
                         guard !hasResumed else { return }
                         hasResumed = true
+                        print("⏰ Samsung TV WebSocket bağlantı timeout - port \(port)")
                         continuation.resume(throwing: TVServiceError.connectionFailed("WebSocket bağlantı timeout - kullanıcı izin vermedi"))
                     }
                     
@@ -80,12 +107,12 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                         
                         switch result {
                         case .success(let message):
-                            print("✅ Samsung TV WebSocket bağlantısı açıldı (token alma)")
+                            print("✅ Samsung TV WebSocket bağlantısı açıldı (token alma) - port \(port)")
                             self.device.port = port
                             self.handleWebSocketMessage(message)
                             continuation.resume()
                         case .failure(let error):
-                            print("❌ Samsung TV WebSocket bağlantı hatası \(webSocketURL): \(error)")
+                            print("❌ Samsung TV WebSocket bağlantı hatası port \(port) \(webSocketURL): \(error)")
                             continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV WebSocket'e bağlanılamadı"))
                         }
                     }
@@ -101,6 +128,55 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         throw TVServiceError.connectionFailed("Samsung TV WebSocket'e hiçbir portta bağlanılamadı")
     }
     
+    private func wakeUpSamsungTV() async throws {
+        print("🔔 Samsung TV uyandırma süreci başladı...")
+        
+        let ports = [8002, 8001, 8080, 55000]
+        
+        for port in ports {
+            print("🔔 Samsung TV Port \(port) için uyandırma isteği gönderiliyor...")
+            
+            let wakeUpURL = URL(string: "http://\(device.ipAddress):\(port)/")!
+            print("🔔 Samsung TV Uyandırma URL: \(wakeUpURL)")
+            
+            do {
+                let (_, response) = try await urlSession?.data(for: URLRequest(url: wakeUpURL)) ?? (Data(), URLResponse())
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("✅ Samsung TV Uyandırma isteği başarılı - port \(port), status: \(httpResponse.statusCode)")
+                }
+            } catch {
+                print("❌ Samsung TV Uyandırma isteği hatası - port \(port): \(error)")
+            }
+            
+            let permissionURL = URL(string: "http://\(device.ipAddress):\(port)/api/v2/applications")!
+            print("🔔 Samsung TV İzin popup tetikleme URL: \(permissionURL)")
+            
+            var permissionRequest = URLRequest(url: permissionURL)
+            permissionRequest.httpMethod = "POST"
+            permissionRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            permissionRequest.setValue("ArcTVRemote", forHTTPHeaderField: "User-Agent")
+            
+            let permissionData = [
+                "name": "ArcTVRemote",
+                "token": ""
+            ] as [String : Any]
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: permissionData)
+                permissionRequest.httpBody = jsonData
+                
+                let (_, permissionResponse) = try await urlSession?.data(for: permissionRequest) ?? (Data(), URLResponse())
+                if let httpResponse = permissionResponse as? HTTPURLResponse {
+                    print("✅ Samsung TV İzin popup tetikleme başarılı - port \(port), status: \(httpResponse.statusCode)")
+                }
+            } catch {
+                print("❌ Samsung TV İzin popup tetikleme hatası - port \(port): \(error)")
+            }
+        }
+        
+        print("🔔 Samsung TV uyandırma süreci tamamlandı")
+    }
+    
     private func connectWithToken(_ token: String) async throws {
         let webSocketURL = createWebSocketURL(token: token, port: device.port)
         print("🌐 Samsung TV Token ile bağlantı URL: \(webSocketURL)")
@@ -109,7 +185,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         
         var urlRequest = URLRequest(url: webSocketURL)
         urlRequest.networkServiceType = .responsiveData
-        urlRequest.timeoutInterval = 30
+        urlRequest.timeoutInterval = 60
         
         webSocketTask = urlSession?.webSocketTask(with: urlRequest)
         webSocketTask?.resume()
@@ -117,7 +193,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             var hasResumed = false
             
-            let timeout = DispatchTime.now() + .seconds(30)
+            let timeout = DispatchTime.now() + .seconds(60)
             DispatchQueue.global().asyncAfter(deadline: timeout) {
                 guard !hasResumed else { return }
                 hasResumed = true
@@ -134,6 +210,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                     self.isConnected = true
                     self.delegate?.tvService(self, didConnect: self.device)
                     self.handleWebSocketMessage(message)
+                    self.startReceivingMessages()
                     continuation.resume()
                 case .failure(let error):
                     print("❌ Samsung TV WebSocket bağlantı hatası \(webSocketURL): \(error)")
@@ -237,9 +314,9 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
             return "KEY_PAUSE"
         case "stop":
             return "KEY_STOP"
-        case "volumeup", "volume_up":
+        case "volumeup", "volume_up", "increase":
             return "KEY_VOLUP"
-        case "volumedown", "volume_down":
+        case "volumedown", "volume_down", "decrease":
             return "KEY_VOLDOWN"
         case "mute":
             return "KEY_MUTE"
@@ -286,34 +363,51 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         guard let data = message.data(using: .utf8) else { return }
         
         do {
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let event = json["event"] as? String {
-                
-                switch event {
-                case "ms.channel.connect":
-                    if let dataDict = json["data"] as? [String: Any],
-                       let token = dataDict["token"] as? String {
-                        print("🔑 Samsung TV token alındı: \(token)")
-                        setDeviceToken(token, deviceId: device.id.uuidString)
-                        
-                        print("✅ Samsung TV izin verildi! Token ile yeniden bağlanıyor...")
-                        
-                        Task {
-                            do {
-                                try await connectWithToken(token)
-                                print("✅ Samsung TV token ile bağlantı başarılı!")
-                            } catch {
-                                print("❌ Samsung TV token ile bağlantı hatası: \(error)")
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let event = json["event"] as? String {
+                    switch event {
+                    case "ms.channel.connect":
+                        if let dataDict = json["data"] as? [String: Any],
+                           let token = dataDict["token"] as? String {
+                            print("🔑 Samsung TV token alındı: \(token)")
+                            setDeviceToken(token, deviceId: device.id.uuidString)
+                            
+                            print("✅ Samsung TV izin verildi! Token ile yeniden bağlanıyor...")
+                            
+                            Task {
+                                do {
+                                    try await connectWithToken(token)
+                                    print("✅ Samsung TV token ile bağlantı başarılı!")
+                                } catch {
+                                    print("❌ Samsung TV token ile bağlantı hatası: \(error)")
+                                }
                             }
                         }
+                    case "ms.channel.unauthorized":
+                        print("❌ Samsung TV izni reddedildi")
+                        DispatchQueue.main.async {
+                            print("❌ Samsung TV izni reddedildi. Lütfen tekrar deneyin.")
+                        }
+                    case "ms.channel.timeOut":
+                        print("⏰ Samsung TV channel timeout - bağlantı korunuyor")
+                    default:
+                        break
                     }
-                case "ms.channel.unauthorized":
-                    print("❌ Samsung TV izni reddedildi")
-                    DispatchQueue.main.async {
-                        print("❌ Samsung TV izni reddedildi. Lütfen tekrar deneyin.")
+                } else if let dataDict = json["data"] as? [String: Any],
+                          let token = dataDict["token"] as? String {
+                    print("🔑 Samsung TV token alındı (data içinde): \(token)")
+                    setDeviceToken(token, deviceId: device.id.uuidString)
+                    
+                    print("✅ Samsung TV izin verildi! Token ile yeniden bağlanıyor...")
+                    
+                    Task {
+                        do {
+                            try await connectWithToken(token)
+                            print("✅ Samsung TV token ile bağlantı başarılı!")
+                        } catch {
+                            print("❌ Samsung TV token ile bağlantı hatası: \(error)")
+                        }
                     }
-                default:
-                    break
                 }
             }
         } catch {
@@ -357,13 +451,21 @@ extension SamsungTVService {
     }
     
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        guard let serverTrust = challenge.protectionSpace.serverTrust else {
-            completionHandler(.performDefaultHandling, nil)
-            return
-        }
+        print("🔐 Samsung TV SSL Challenge alındı: \(challenge.protectionSpace.authenticationMethod)")
+        print("🔐 Samsung TV Host: \(challenge.protectionSpace.host)")
         
-        let credential = URLCredential(trust: serverTrust)
-        completionHandler(.useCredential, credential)
+        // Tüm SSL challenge'ları otomatik olarak kabul et (Node.js'deki gibi SSL devre dışı)
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
+            print("🔐 Samsung TV SSL sertifikası tamamen devre dışı bırakılıyor...")
+            let credential = URLCredential(trust: challenge.protectionSpace.serverTrust!)
+            completionHandler(.useCredential, credential)
+        } else if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodClientCertificate {
+            print("🔐 Samsung TV Client Certificate challenge - devre dışı bırakılıyor")
+            completionHandler(.useCredential, nil)
+        } else {
+            print("🔐 Samsung TV SSL challenge başka bir yöntem: \(challenge.protectionSpace.authenticationMethod)")
+            completionHandler(.performDefaultHandling, nil)
+        }
     }
 }
 
@@ -371,7 +473,7 @@ extension SamsungTVService {
     private func setPingTimer() {
         DispatchQueue.main.async {
             self.pingTimer?.invalidate()
-            self.pingTimer = Timer.scheduledTimer(timeInterval: 9.0,
+            self.pingTimer = Timer.scheduledTimer(timeInterval: 30.0,
                                                   target: self,
                                                   selector: #selector(self.ping),
                                                   userInfo: nil,
@@ -381,10 +483,47 @@ extension SamsungTVService {
     }
     
     @objc private func ping() {
+        guard isConnected else { return }
+        
         webSocketTask?.sendPing { [weak self] error in
             if let error = error {
                 print("❌ Samsung TV ping hatası: \(error)")
-                self?.reconnect()
+                self?.handlePingError()
+            }
+        }
+    }
+    
+    private func handlePingError() {
+        guard isConnected else { return }
+        
+        print("🔄 Samsung TV ping hatası nedeniyle bağlantı kontrol ediliyor...")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            guard self.isConnected else { return }
+            
+            Task {
+                do {
+                    try await self.connect()
+                } catch {
+                    print("❌ Samsung TV yeniden bağlantı hatası: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func startReceivingMessages() {
+        webSocketTask?.receive { [weak self] result in
+            guard let self = self, self.isConnected else { return }
+            
+            switch result {
+            case .success(let message):
+                self.handleWebSocketMessage(message)
+                self.startReceivingMessages()
+            case .failure(let error):
+                print("❌ Samsung TV WebSocket mesaj alma hatası: \(error)")
+                if self.isConnected {
+                    self.handlePingError()
+                }
             }
         }
     }

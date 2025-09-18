@@ -167,6 +167,13 @@ class RemoteUIManager {
         toggle
     ]
     
+    lazy var samsungDefaultButtons: [UIButton] = [
+        power, home, up,
+        ok, left, right, down,
+        back, options, source, samsungHub, mute, colorsShortcut,
+        increase, decrease, channelUp, channelDown
+    ]
+    
     lazy var stackView: UIStackView = {
         let stackView = UIStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -285,6 +292,115 @@ class RemoteUIManager {
         button.addTarget(self, action: #selector(toggleTapped), for: .touchUpInside)
         return button
     }()
+    lazy var back: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "back"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.back.rawValue
+        return button
+    }()
+    
+    lazy var options: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "options"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.options.rawValue
+        return button
+    }()
+    
+    lazy var source: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "source"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.source.rawValue
+        return button
+    }()
+    
+    lazy var samsungHub: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "samsung.hub"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.smartHub.rawValue
+        return button
+    }()
+    
+    lazy var mute: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "mute"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.mute.rawValue
+        return button
+    }()
+    
+    lazy var colorsShortcut: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "color.shortcut"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.colorsShortcut.rawValue
+        return button
+    }()
+    
+    lazy var increase: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "increase"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.increase.rawValue
+        return button
+    }()
+    
+    lazy var decrease: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "decrease"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.decrease.rawValue
+        return button
+    }()
+    
+    lazy var channelUp: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "channelUp"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.channelUp.rawValue
+        return button
+    }()
+    
+    lazy var channelDown: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.masksToBounds = true
+        button.contentMode = .scaleAspectFit
+        button.setImage(UIImage(named: "channelDown"), for: .normal)
+        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.tag = Buttons.channeldown.rawValue
+        return button
+    }()
     
     lazy var touchPadImageView: UIImageView = {
         let imageView = UIImageView()
@@ -358,7 +474,14 @@ class RemoteUIManager {
         view.addSubview(touchPadImageView)
     }
     
-    func setupMianStackView(view: UIView) {
+    func setupSamsungDefaultViews(view: UIView){
+        samsungDefaultButtons.forEach({ view.addSubview($0)})
+        view.addSubview(touchPadImageView)
+        
+        isOn = false
+    }
+    
+    func setupMainStackView(view: UIView) {
         view.addSubview(stackView)
         
         allRemoteButtons.removeAll()
@@ -1470,6 +1593,105 @@ class RemoteUIManager {
         ])
     }
     
+    func setupSamsungConstraints(safeArea: UILayoutGuide, startLayoutMarginGuide: UILayoutGuide) {
+        NSLayoutConstraint.activate([
+            home.topAnchor.constraint(equalTo: startLayoutMarginGuide.topAnchor, constant: 16),
+            home.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor , constant: 32),
+            home.heightAnchor.constraint(equalToConstant: 70),
+            home.widthAnchor.constraint(equalToConstant: 92),
+            
+            toggle.centerXAnchor.constraint(equalTo: safeArea.centerXAnchor),
+            toggle.centerYAnchor.constraint(equalTo: home.centerYAnchor),
+            toggle.heightAnchor.constraint(equalToConstant: 50),
+            toggle.widthAnchor.constraint(equalToConstant: 104),
+            
+            power.topAnchor.constraint(equalTo: home.topAnchor),
+            power.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -32),
+            power.heightAnchor.constraint(equalToConstant: 70),
+            power.widthAnchor.constraint(equalToConstant: 92),
+            
+            touchPadImageView.topAnchor.constraint(equalTo: toggle.bottomAnchor, constant: 18),
+            touchPadImageView.bottomAnchor.constraint(equalTo: down.bottomAnchor, constant: 16),
+            touchPadImageView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -16),
+            touchPadImageView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 16),
+            
+            up.topAnchor.constraint(equalTo: power.bottomAnchor, constant: 24),
+            up.centerXAnchor.constraint(equalTo: safeArea.centerXAnchor),
+            up.heightAnchor.constraint(equalToConstant: 59),
+            up.widthAnchor.constraint(equalToConstant: 133),
+            
+            ok.topAnchor.constraint(equalTo: up.bottomAnchor, constant: 4),
+            ok.centerXAnchor.constraint(equalTo: safeArea.centerXAnchor),
+            ok.heightAnchor.constraint(equalToConstant: 94),
+            ok.widthAnchor.constraint(equalToConstant: 94),
+            
+            left.trailingAnchor.constraint(equalTo: ok.leadingAnchor, constant: -4),
+            left.centerYAnchor.constraint(equalTo: ok.centerYAnchor),
+            left.heightAnchor.constraint(equalToConstant: 133),
+            left.widthAnchor.constraint(equalToConstant: 59),
+            
+            right.leadingAnchor.constraint(equalTo: ok.trailingAnchor, constant: 4),
+            right.centerYAnchor.constraint(equalTo: ok.centerYAnchor),
+            right.heightAnchor.constraint(equalToConstant: 133),
+            right.widthAnchor.constraint(equalToConstant: 59),
+            
+            down.topAnchor.constraint(equalTo: ok.bottomAnchor, constant: 4),
+            down.centerXAnchor.constraint(equalTo: ok.centerXAnchor),
+            down.heightAnchor.constraint(equalToConstant: 59),
+            down.widthAnchor.constraint(equalToConstant: 133),
+            
+            back.topAnchor.constraint(equalTo: down.bottomAnchor, constant: 30),
+            back.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+            back.heightAnchor.constraint(equalToConstant: 60),
+            back.widthAnchor.constraint(equalToConstant: 80),
+            
+            options.topAnchor.constraint(equalTo: back.topAnchor),
+            options.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -20),
+            options.heightAnchor.constraint(equalToConstant: 60),
+            options.widthAnchor.constraint(equalToConstant: 80),
+            
+            mute.topAnchor.constraint(equalTo: back.bottomAnchor, constant: 15),
+            mute.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+            mute.heightAnchor.constraint(equalToConstant: 60),
+            mute.widthAnchor.constraint(equalToConstant: 80),
+            
+            source.topAnchor.constraint(equalTo: mute.topAnchor),
+            source.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -20),
+            source.heightAnchor.constraint(equalToConstant: 60),
+            source.widthAnchor.constraint(equalToConstant: 80),
+            
+            colorsShortcut.topAnchor.constraint(equalTo: mute.bottomAnchor, constant: 15),
+            colorsShortcut.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+            colorsShortcut.heightAnchor.constraint(equalToConstant: 60),
+            colorsShortcut.widthAnchor.constraint(equalToConstant: 80),
+            
+            samsungHub.topAnchor.constraint(equalTo: colorsShortcut.topAnchor),
+            samsungHub.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -20),
+            samsungHub.heightAnchor.constraint(equalToConstant: 60),
+            samsungHub.widthAnchor.constraint(equalToConstant: 80),
+            
+            increase.topAnchor.constraint(equalTo: colorsShortcut.bottomAnchor, constant: 8),
+            increase.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+            increase.heightAnchor.constraint(equalToConstant: 50),
+            increase.widthAnchor.constraint(equalToConstant: 70),
+            
+            channelUp.topAnchor.constraint(equalTo: increase.topAnchor),
+            channelUp.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -20),
+            channelUp.heightAnchor.constraint(equalToConstant: 50),
+            channelUp.widthAnchor.constraint(equalToConstant: 70),
+            
+            decrease.topAnchor.constraint(equalTo: increase.bottomAnchor, constant: 8),
+            decrease.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+            decrease.heightAnchor.constraint(equalToConstant: 50),
+            decrease.widthAnchor.constraint(equalToConstant: 70),
+            
+            channelDown.topAnchor.constraint(equalTo: decrease.topAnchor),
+            channelDown.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -20),
+            channelDown.heightAnchor.constraint(equalToConstant: 50),
+            channelDown.widthAnchor.constraint(equalToConstant: 70),
+        ])
+    }
+    
     @objc private func toggleTapped() {
         isOn.toggle()
         if isOn {
@@ -1478,6 +1700,60 @@ class RemoteUIManager {
         } else {
             toggle.setImage(UIImage(named: offImageName), for: .normal)
             touchPadImageView.isHidden = true
+        }
+    }
+    
+    @objc private func buttonAction(sender: UIButton) {
+        guard let device = TVServiceManager.shared.currentDevice else {
+            print("❌ RemoteUIManager: currentDevice nil")
+            return
+        }
+        
+        print("✅ RemoteUIManager: Kumanda butonu basıldı - \(device.displayName)")
+        
+        if let event: TVRemoteEvent = .init(rawValue: sender.tag) {
+            let commandString = getCommandString(for: event)
+            Task {
+                do {
+                    try await TVServiceManager.shared.sendCommand(TVRemoteCommand(command: commandString), to: device)
+                } catch {
+                    print("❌ RemoteUIManager: Komut gönderme hatası: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func getCommandString(for event: TVRemoteEvent) -> String {
+        switch event {
+        case .power: return "power"
+        case .back: return "back"
+        case .home: return "home"
+        case .up: return "up"
+        case .down: return "down"
+        case .right: return "right"
+        case .left: return "left"
+        case .ok: return "ok"
+        case .options: return "options"
+        case .playpause: return "playpause"
+        case .rev: return "rev"
+        case .fwd: return "fwd"
+        case .youtube: return "youtube"
+        case .spotify: return "spotify"
+        case .netflix: return "netflix"
+        case .decrease: return "volumedown"
+        case .increase: return "volumeup"
+        case .keyboard: return "keyboard"
+        case .ppause: return "ppause"
+        case .mute: return "mute"
+        case .source: return "source"
+        case .smartHub: return "smartHub"
+           case .colorsShortcut: return "colorsShortcut"
+           case .channelUp: return "channelUp"
+           case .channeldown: return "channelDown"
+           case .amazonMusic: return "amazonMusic"
+           case .primeVideo: return "primeVideo"
+           case .alexa: return "alexa"
+           case .caption: return "caption"
         }
     }
 }

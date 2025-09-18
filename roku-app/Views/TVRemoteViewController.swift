@@ -88,14 +88,8 @@ class TVRemoteViewController: UIViewController {
         view.addSubview(connectionStatusLabel)
         view.addSubview(status)
         view.addSubview(remoteButtonsView)
-        RemoteUIManager.shared.setupDefaultViews(view: remoteButtonsView)
-        RemoteUIManager.shared.setupMianStackView(view: remoteButtonsView)
-        RemoteUIManager.shared.allRemoteButtons.forEach { button in
-            button.addTarget(self, action: #selector(buttonAction(sender:)), for: .touchUpInside)
-        }
-        RemoteUIManager.shared.defaultButtons.forEach { button in
-            button.addTarget(self, action: #selector(buttonAction(sender:)), for: .touchUpInside)
-        }
+        
+        setupDefaultUI()
     }
     
     private func setupConstraints() {
@@ -131,6 +125,7 @@ class TVRemoteViewController: UIViewController {
         viewModel.$currentDevice
             .receive(on: DispatchQueue.main)
             .sink { [weak self] device in
+                print("🔗 TVRemoteViewController: currentDevice değişti - \(device?.displayName ?? "nil")")
                 self?.updateConnectionStatus(device)
             }
             .store(in: &cancellables)
@@ -138,11 +133,27 @@ class TVRemoteViewController: UIViewController {
     
     private func updateConnectionStatus(_ device: TVDevice?) {
         if let device = device {
-            connectionStatusLabel.text = device.name
+            connectionStatusLabel.text = device.displayName
             status.image = UIImage(named: "connected")
+            print("✅ TVRemoteViewController: Bağlantı durumu güncellendi - \(device.displayName)")
         } else {
             connectionStatusLabel.text = "Not Connected"
             status.image = UIImage(named: "not.connected")
+            print("❌ TVRemoteViewController: Bağlantı durumu - Not Connected")
+        }
+        setupDefaultUI()
+    }
+    
+    private func setupDefaultUI() {
+        RemoteUIManager.shared.setupMainStackView(view: remoteButtonsView)
+        RemoteUIManager.shared.allRemoteButtons.forEach { button in
+            button.addTarget(self, action: #selector(buttonAction(sender:)), for: .touchUpInside)
+        }
+        RemoteUIManager.shared.setupDefaultViews(view: remoteButtonsView)
+        RemoteUIManager.shared.setupConstraints(safeArea: remoteButtonsView.safeAreaLayoutGuide, startLayoutMarginGuide: remoteButtonsView.layoutMarginsGuide)
+        
+        RemoteUIManager.shared.defaultButtons.forEach { button in
+            button.addTarget(self, action: #selector(buttonAction(sender:)), for: .touchUpInside)
         }
     }
     
@@ -176,9 +187,12 @@ class TVRemoteViewController: UIViewController {
     
     @objc func buttonAction(sender: UIButton) {
         guard let device = viewModel.currentDevice else {
+            print("❌ TVRemoteViewController: currentDevice nil, DeviceDiscoveryViewController açılıyor")
             showDeviceList()
             return
         }
+        
+        print("✅ TVRemoteViewController: Kumanda butonu basıldı - \(device.displayName)")
         
         if let event: TVRemoteEvent = .init(rawValue: sender.tag) {
             sendTVRemoteEvent(event)

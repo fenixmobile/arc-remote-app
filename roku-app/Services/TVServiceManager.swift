@@ -18,7 +18,7 @@ class TVServiceManager: ObservableObject {
     
     private var ssdpClients: [SSDPDiscovery] = []
     private var scanCompletion: (([TVDevice], Bool) -> Void)?
-    private var connectedServices: [UUID: TVServiceProtocol] = [:]
+    private var currentService: TVServiceProtocol?
 
     init() {
         setupServices()
@@ -26,8 +26,6 @@ class TVServiceManager: ObservableObject {
     }
 
     private func setupServices() {
-        // Servisler artık dinamik olarak oluşturulacak
-        // Dummy data kullanmıyoruz
     }
 
     func startDiscovery() {
@@ -110,37 +108,39 @@ class TVServiceManager: ObservableObject {
         networkMonitor.start(queue: queue)
     }
 
+    func getService(for device: TVDevice) -> TVServiceProtocol {
+        switch device.brand {
+        case .roku:
+            return RokuTVService(device: device)
+        case .samsung:
+            return SamsungTVService(device: device)
+        case .fireTV:
+            return FireTVService(device: device)
+        case .sony:
+            return SonyTVService(device: device)
+        case .tcl:
+            return TCLTVService(device: device)
+        case .lg:
+            return LGTVService(device: device)
+        case .philipsAndroid:
+            return PhilipsAndroidTVService(device: device)
+        case .philips:
+            return PhilipsTVService(device: device)
+        case .vizio:
+            return VizioTVService(device: device)
+        case .androidTV:
+            return AndroidTVService(device: device)
+        case .toshiba:
+            return ToshibaTVService(device: device)
+        case .panasonic:
+            return PanasonicTVService(device: device)
+        }
+    }
+    
     func connectToDevice(_ device: inout TVDevice) async throws {
         print("🔗 Cihaza bağlanılıyor: \(device.name) - \(device.ipAddress):\(device.port)")
         
-        let service: TVServiceProtocol
-        
-        switch device.brand {
-        case .roku:
-            service = RokuTVService(device: device)
-        case .samsung:
-            service = SamsungTVService(device: device)
-        case .fireTV:
-            service = FireTVService(device: device)
-        case .sony:
-            service = SonyTVService(device: device)
-        case .tcl:
-            service = TCLTVService(device: device)
-        case .lg:
-            service = LGTVService(device: device)
-        case .philipsAndroid:
-            service = PhilipsAndroidTVService(device: device)
-        case .philips:
-            service = PhilipsTVService(device: device)
-        case .vizio:
-            service = VizioTVService(device: device)
-        case .androidTV:
-            service = AndroidTVService(device: device)
-        case .toshiba:
-            service = ToshibaTVService(device: device)
-        case .panasonic:
-            service = PanasonicTVService(device: device)
-        }
+        let service = getService(for: device)
 
         print("🔗 Servis oluşturuldu, bağlantı kuruluyor...")
         do {
@@ -155,10 +155,9 @@ class TVServiceManager: ObservableObject {
                 print("🔗 Samsung port güncellendi: \(device.port)")
             }
             
-            // Connected service'i sakla
-            connectedServices[device.id] = service
+            currentService = service
             connectedDeviceIds.insert(device.id)
-            print("🔗 Connected service saklandı: \(device.id)")
+            print("🔗 Current service saklandı: \(device.id)")
         } catch {
             print("❌ Bağlantı başarısız: \(error)")
             throw error
@@ -166,8 +165,10 @@ class TVServiceManager: ObservableObject {
 
         let finalDevice = device
         DispatchQueue.main.async {
-            print("🔗 currentDevice güncelleniyor: \(finalDevice.name) - \(finalDevice.brand)")
+            print("🔗 TVServiceManager: currentDevice güncelleniyor: \(finalDevice.displayName) - \(finalDevice.brand)")
+            print("🔗 TVServiceManager: currentDevice önceki değer: \(self.currentDevice?.displayName ?? "nil")")
             self.currentDevice = finalDevice
+            print("🔗 TVServiceManager: currentDevice yeni değer: \(self.currentDevice?.displayName ?? "nil")")
             if !self.connectedDevices.contains(where: { $0.id == finalDevice.id }) {
                 self.connectedDevices.append(finalDevice)
             }
@@ -192,34 +193,7 @@ class TVServiceManager: ObservableObject {
     func disconnectFromDevice(_ device: TVDevice) {
         print("🔌 Cihazdan bağlantı kesiliyor: \(device.name) - \(device.ipAddress):\(device.port)")
         
-        let service: TVServiceProtocol
-        
-        switch device.brand {
-        case .roku:
-            service = RokuTVService(device: device)
-        case .samsung:
-            service = SamsungTVService(device: device)
-        case .fireTV:
-            service = FireTVService(device: device)
-        case .sony:
-            service = SonyTVService(device: device)
-        case .tcl:
-            service = TCLTVService(device: device)
-        case .lg:
-            service = LGTVService(device: device)
-        case .philipsAndroid:
-            service = PhilipsAndroidTVService(device: device)
-        case .philips:
-            service = PhilipsTVService(device: device)
-        case .vizio:
-            service = VizioTVService(device: device)
-        case .androidTV:
-            service = AndroidTVService(device: device)
-        case .toshiba:
-            service = ToshibaTVService(device: device)
-        case .panasonic:
-            service = PanasonicTVService(device: device)
-        }
+        let service = getService(for: device)
 
         service.disconnect()
 
@@ -227,7 +201,7 @@ class TVServiceManager: ObservableObject {
             self.currentDevice = nil
             self.connectedDevices.removeAll(where: { $0.id == device.id })
             self.connectedDeviceIds.remove(device.id)
-            self.connectedServices.removeValue(forKey: device.id)
+            self.currentService = nil
         }
     }
 
@@ -286,34 +260,7 @@ extension TVServiceManager: SSDPDiscoveryDelegate {
     }
     
     private func testDeviceConnection(_ device: inout TVDevice) async {
-        let service: TVServiceProtocol
-        
-        switch device.brand {
-        case .roku:
-            service = RokuTVService(device: device)
-        case .samsung:
-            service = SamsungTVService(device: device)
-        case .fireTV:
-            service = FireTVService(device: device)
-        case .sony:
-            service = SonyTVService(device: device)
-        case .tcl:
-            service = TCLTVService(device: device)
-        case .lg:
-            service = LGTVService(device: device)
-        case .philipsAndroid:
-            service = PhilipsAndroidTVService(device: device)
-        case .philips:
-            service = PhilipsTVService(device: device)
-        case .vizio:
-            service = VizioTVService(device: device)
-        case .androidTV:
-            service = AndroidTVService(device: device)
-        case .toshiba:
-            service = ToshibaTVService(device: device)
-        case .panasonic:
-            service = PanasonicTVService(device: device)
-        }
+        let service = getService(for: device)
         
         do {
             try await service.connect()
@@ -469,44 +416,17 @@ extension TVServiceManager {
     func sendCommand(_ command: TVRemoteCommand, to device: TVDevice) async throws {
         print("🎮 Komut gönderiliyor: \(command.command) - \(device.name) - \(device.ipAddress):\(device.port)")
         
-        // Connected service'i kullan, yoksa yeni oluştur
         var service: TVServiceProtocol
         
-        if let connectedService = connectedServices[device.id] {
-            service = connectedService
-            // Connected service'in isConnected property'sini true yap
+        if let currentService = currentService {
+            service = currentService
             if let baseService = service as? BaseTVService {
                 baseService.isConnected = true
             }
-            print("🎮 Connected service kullanılıyor: \(device.brand)")
+            print("🎮 Current service kullanılıyor: \(device.brand)")
         } else {
             print("🎮 Yeni service oluşturuluyor: \(device.brand)")
-            switch device.brand {
-            case .roku:
-                service = RokuTVService(device: device)
-            case .samsung:
-                service = SamsungTVService(device: device)
-            case .fireTV:
-                service = FireTVService(device: device)
-            case .sony:
-                service = SonyTVService(device: device)
-            case .tcl:
-                service = TCLTVService(device: device)
-            case .lg:
-                service = LGTVService(device: device)
-            case .philipsAndroid:
-                service = PhilipsAndroidTVService(device: device)
-            case .philips:
-                service = PhilipsTVService(device: device)
-            case .vizio:
-                service = VizioTVService(device: device)
-            case .androidTV:
-                service = AndroidTVService(device: device)
-            case .toshiba:
-                service = ToshibaTVService(device: device)
-            case .panasonic:
-                service = PanasonicTVService(device: device)
-            }
+            service = getService(for: device)
         }
         
         try await service.sendCommand(command)
@@ -514,31 +434,7 @@ extension TVServiceManager {
     
     func getStoredConnectedTVService() -> TVServiceProtocol? {
         guard let device = currentDevice else { return nil }
-        
-        switch device.brand {
-        case .roku, .tcl:
-            return RokuTVService(device: device)
-        case .fireTV:
-            return FireTVService(device: device)
-        case .samsung:
-            return SamsungTVService(device: device)
-        case .sony:
-            return SonyTVService(device: device)
-        case .lg:
-            return LGTVService(device: device)
-        case .philipsAndroid:
-            return PhilipsAndroidTVService(device: device)
-        case .philips:
-            return PhilipsTVService(device: device)
-        case .vizio:
-            return VizioTVService(device: device)
-        case .androidTV:
-            return AndroidTVService(device: device)
-        case .toshiba:
-            return ToshibaTVService(device: device)
-        case .panasonic:
-            return PanasonicTVService(device: device)
-        }
+        return getService(for: device)
     }
     
     func connectToStoredDevice() {
@@ -549,6 +445,47 @@ extension TVServiceManager {
             } catch {
                 print("Failed to connect to stored device: \(error)")
             }
+        }
+    }
+}
+
+extension TVServiceManager: TVServiceDelegate {
+    func tvService(_ service: TVServiceProtocol, didConnect device: TVDevice) {
+        print("🔗 TVServiceManager: tvService didConnect çağrıldı - \(device.displayName)")
+        
+        currentService = service
+        print("🔗 TVServiceManager: Current service güncellendi: \(device.displayName)")
+        
+        DispatchQueue.main.async {
+            print("🔗 TVServiceManager: currentDevice güncelleniyor: \(device.displayName) - \(device.brand)")
+            print("🔗 TVServiceManager: currentDevice önceki değer: \(self.currentDevice?.displayName ?? "nil")")
+            self.currentDevice = device
+            print("🔗 TVServiceManager: currentDevice yeni değer: \(self.currentDevice?.displayName ?? "nil")")
+            
+            if !self.connectedDevices.contains(where: { $0.id == device.id }) {
+                self.connectedDevices.append(device)
+            }
+        }
+    }
+    
+    func tvService(_ service: TVServiceProtocol, didDisconnect device: TVDevice) {
+        print("🔗 TVServiceManager: tvService didDisconnect çağrıldı - \(device.displayName)")
+        
+        DispatchQueue.main.async {
+            self.currentDevice = nil
+            self.connectedDevices.removeAll { $0.id == device.id }
+        }
+    }
+    
+    func tvService(_ service: TVServiceProtocol, didReceiveError error: Error) {
+        print("🔗 TVServiceManager: tvService didReceiveError çağrıldı - \(error.localizedDescription)")
+    }
+    
+    func tvService(_ service: TVServiceProtocol, didDiscoverDevices devices: [TVDevice]) {
+        print("🔗 TVServiceManager: tvService didDiscoverDevices çağrıldı - \(devices.count) cihaz")
+        
+        DispatchQueue.main.async {
+            self.discoveredDevices = devices
         }
     }
 }

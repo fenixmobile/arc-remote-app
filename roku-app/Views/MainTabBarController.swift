@@ -54,6 +54,7 @@ class MainTabBarController: UITabBarController {
         tabBar.tintColor = .white
         tabBar.unselectedItemTintColor = .gray
         tabBar.itemWidth = 100
+        tabBar.itemPositioning = .centered
     }
 }
 
@@ -81,7 +82,7 @@ class SettingsViewController: UIViewController {
     
     private func setupConstraints() {
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -161,13 +162,10 @@ extension SettingsViewController: UITableViewDelegate {
         case 0:
             switch indexPath.row {
             case 0:
-                // Show connected devices
                 showConnectedDevices()
             case 1:
-                // Clear all devices
                 showClearDevicesAlert()
             case 2:
-                // Export device list
                 showExportOptions()
             default:
                 break
@@ -199,7 +197,6 @@ extension SettingsViewController: UITableViewDelegate {
         )
         
         alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { _ in
-            // Clear devices logic
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -211,11 +208,9 @@ extension SettingsViewController: UITableViewDelegate {
         let alert = UIAlertController(title: "Export Device List", message: "Choose export format", preferredStyle: .actionSheet)
         
         alert.addAction(UIAlertAction(title: "JSON", style: .default) { _ in
-            // Export as JSON
         })
         
         alert.addAction(UIAlertAction(title: "CSV", style: .default) { _ in
-            // Export as CSV
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))

@@ -41,8 +41,10 @@ class TVRemoteViewModel: ObservableObject {
         tvServiceManager.$currentDevice
             .receive(on: DispatchQueue.main)
             .sink { [weak self] device in
-                print("🔗 TVRemoteViewModel: currentDevice değişti - \(device?.name ?? "nil")")
+                print("🔗 TVRemoteViewModel: currentDevice değişti - \(device?.displayName ?? "nil")")
+                print("🔗 TVRemoteViewModel: currentDevice önceki değer: \(self?.currentDevice?.displayName ?? "nil")")
                 self?.currentDevice = device
+                print("🔗 TVRemoteViewModel: currentDevice yeni değer: \(self?.currentDevice?.displayName ?? "nil")")
             }
             .store(in: &cancellables)
         

@@ -214,9 +214,14 @@ class DeviceDiscoveryViewController: UIViewController {
             .sink { [weak self] isDiscovering in
                 if isDiscovering {
                     self?.startSearchAnimation()
+                    self?.emptyStateLabel.isHidden = true
                 } else {
                     self?.stopSearchAnimation()
                     self?.refreshButton.isHidden = false
+                    
+                    if self?.viewModel.discoveredDevices.isEmpty == true {
+                        self?.emptyStateLabel.isHidden = false
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -228,7 +233,9 @@ class DeviceDiscoveryViewController: UIViewController {
                     self?.tableView.reloadData()
                 }
                 
-                self?.emptyStateLabel.isHidden = !devices.isEmpty
+                if self?.viewModel.isDiscovering == false {
+                    self?.emptyStateLabel.isHidden = !devices.isEmpty
+                }
                 
                 if self?.viewModel.isDiscovering == true {
                     self?.updateSearchAnimationForCurrentDeviceCount()
@@ -351,8 +358,56 @@ class DeviceDiscoveryViewController: UIViewController {
     }
     
     private func connectToDevice(_ device: TVDevice) {
+        print("🔗 DeviceDiscoveryViewController: \(device.displayName) bağlantısı başlatılıyor")
+        
         let alert = UIAlertController(title: "Connect", message: "Connecting to \(device.displayName)...", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            print("❌ DeviceDiscoveryViewController: Bağlantı iptal edildi")
+        }
+        alert.addAction(cancelAction)
+        
+        present(alert, animated: true)
+        
+        Task {
+            do {
+                print("🔗 DeviceDiscoveryViewController: Samsung TV servisi çağrılıyor...")
+                let service = TVServiceManager.shared.getService(for: device)
+                try await service.connect()
+                print("✅ DeviceDiscoveryViewController: Samsung TV bağlantısı başarılı!")
+                
+                DispatchQueue.main.async {
+                    alert.dismiss(animated: true) {
+                        self.navigateToRemoteController()
+                    }
+                }
+            } catch {
+                print("❌ DeviceDiscoveryViewController: Samsung TV bağlantı hatası: \(error)")
+                
+                DispatchQueue.main.async {
+                    alert.dismiss(animated: true) {
+                        self.showConnectionError(error)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func navigateToRemoteController() {
+        DispatchQueue.main.async {
+            self.dismiss(animated: true) {
+                print("✅ DeviceDiscoveryViewController kapatıldı, ana sayfaya dönüldü")
+            }
+        }
+    }
+    
+    private func showConnectionError(_ error: Error) {
+        let alert = UIAlertController(
+            title: "Connection Failed",
+            message: "Failed to connect to TV: \(error.localizedDescription)",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
     
