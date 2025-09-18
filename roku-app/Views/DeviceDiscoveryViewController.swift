@@ -370,10 +370,10 @@ class DeviceDiscoveryViewController: UIViewController {
         
         Task {
             do {
-                print("🔗 DeviceDiscoveryViewController: Samsung TV servisi çağrılıyor...")
-                let service = TVServiceManager.shared.getService(for: device)
-                try await service.connect()
-                print("✅ DeviceDiscoveryViewController: Samsung TV bağlantısı başarılı!")
+                print("🔗 DeviceDiscoveryViewController: \(device.brand.displayName) servisi çağrılıyor...")
+                var mutableDevice = device
+                try await TVServiceManager.shared.connectToDevice(&mutableDevice)
+                print("✅ DeviceDiscoveryViewController: \(device.brand.displayName) bağlantısı başarılı!")
                 
                 DispatchQueue.main.async {
                     alert.dismiss(animated: true) {
@@ -381,7 +381,7 @@ class DeviceDiscoveryViewController: UIViewController {
                     }
                 }
             } catch {
-                print("❌ DeviceDiscoveryViewController: Samsung TV bağlantı hatası: \(error)")
+                print("❌ DeviceDiscoveryViewController: \(device.brand.displayName) bağlantı hatası: \(error)")
                 
                 DispatchQueue.main.async {
                     alert.dismiss(animated: true) {

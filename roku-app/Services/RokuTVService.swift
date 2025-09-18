@@ -63,8 +63,15 @@ class RokuTVService: BaseTVService {
             throw TVServiceError.commandFailed("Command failed")
         }
         
-        let url = URL(string: "http://\(device.ipAddress):\(device.port)/keypress/\(command.command)")!
-        print("🎮 Roku TV komut gönderiliyor: \(url)")
+        let url: URL
+        if isAppLaunchCommand(command.command) {
+            url = URL(string: "http://\(device.ipAddress):\(device.port)/launch/\(getAppId(for: command.command))")!
+            print("🎮 Roku TV uygulama başlatılıyor: \(url)")
+        } else {
+            url = URL(string: "http://\(device.ipAddress):\(device.port)/keypress/\(command.command)")!
+            print("🎮 Roku TV komut gönderiliyor: \(url)")
+        }
+        
         let startTime = Date()
         
         do {
@@ -166,6 +173,23 @@ extension RokuTVService {
         "VolumeDown": "VolumeDown",
         "VolumeMute": "VolumeMute",
         "PowerOn": "PowerOn",
-        "PowerOff": "PowerOff"
+        "PowerOff": "PowerOff",
+        "Spotify": "Spotify",
+        "YouTube": "YouTube",
+        "Netflix": "Netflix"
     ]
+    
+    private func isAppLaunchCommand(_ command: String) -> Bool {
+        let appCommands = ["Spotify", "YouTube", "Netflix"]
+        return appCommands.contains(command)
+    }
+    
+    private func getAppId(for command: String) -> String {
+        switch command {
+        case "Spotify": return "22"
+        case "YouTube": return "837"
+        case "Netflix": return "12"
+        default: return command
+        }
+    }
 }
