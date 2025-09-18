@@ -44,8 +44,9 @@ class DeviceDiscoveryViewController: UIViewController {
         super.viewWillAppear(animated)
         refreshButton.isHidden = true
         startAutoDiscovery()
-        
+        print("🔍 DeviceDiscoveryViewController: viewWillAppear çağrıldı")
         if viewModel.discoveredDevices.isEmpty {
+            isAutoDiscovery = true
             startDiscovery()
         }
     }
@@ -215,9 +216,11 @@ class DeviceDiscoveryViewController: UIViewController {
                 if isDiscovering {
                     self?.startSearchAnimation()
                     self?.emptyStateLabel.isHidden = true
+                    self?.refreshButton.isHidden = true
                 } else {
+                    print("🔍 setupBindings stopSearchAnimation")
                     self?.stopSearchAnimation()
-                    self?.refreshButton.isHidden = false
+                    
                     
                     if self?.viewModel.discoveredDevices.isEmpty == true {
                         self?.emptyStateLabel.isHidden = false
@@ -282,11 +285,7 @@ class DeviceDiscoveryViewController: UIViewController {
             self.searchIconView.isHidden = true
             self.searchCircleView.isHidden = true
             self.searchCircleView.layer.removeAnimation(forKey: "rotation")
-            
-            if !self.isAutoDiscovery {
-                self.refreshButton.isHidden = false
-            }
-            
+            self.refreshButton.isHidden = false
             self.isAutoDiscovery = false
         }
     }
@@ -323,7 +322,7 @@ class DeviceDiscoveryViewController: UIViewController {
                 
                 self.view.layoutIfNeeded()
                 
-                let targetCenter = CGPoint(x: self.refreshButton.center.x, y: self.refreshButton.center.y)
+                let targetCenter = CGPoint(x: self.refreshButton.center.x, y: self.refreshButton.center.y - 60)
                 
                 self.searchIconView.center = targetCenter
                 self.searchCircleView.center = targetCenter

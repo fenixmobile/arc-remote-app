@@ -98,6 +98,11 @@ class TVServiceManager: ObservableObject {
     }
 
     private func startMonitoringNetwork() {
+        #if targetEnvironment(simulator)
+        print("⚠️ Network monitoring disabled in simulator to avoid SO_NOWAKEFROMSLEEP warnings")
+        return
+        #endif
+        
         networkMonitor.pathUpdateHandler = { path in
             if path.status == .satisfied {
                 print("Network is available.")
