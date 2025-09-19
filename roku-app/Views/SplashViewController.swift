@@ -168,12 +168,20 @@ class SplashViewController: UIViewController {
     private func navigateToMainApp() {
         guard let window = view.window else { return }
         
-        let tabBarController = MainTabBarController()
-        
-        UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-            window.rootViewController = tabBarController
-        }) { _ in
-            window.makeKeyAndVisible()
+        if UserDefaultsManager.shared.hasCompletedOnboarding {
+            let mainTabBarController = MainTabBarController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = mainTabBarController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
+        } else {
+            let pageViewController = PageViewController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = pageViewController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
         }
     }
 }

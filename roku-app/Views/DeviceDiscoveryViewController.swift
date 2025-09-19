@@ -46,9 +46,13 @@ class DeviceDiscoveryViewController: UIViewController {
         startAutoDiscovery()
         print("🔍 DeviceDiscoveryViewController: viewWillAppear çağrıldı")
         if viewModel.discoveredDevices.isEmpty {
-            isAutoDiscovery = true
+isAutoDiscovery = true
             startDiscovery()
         }
+    }
+    
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
     }
     
     override func viewWillDisappear(_ animated: Bool) {

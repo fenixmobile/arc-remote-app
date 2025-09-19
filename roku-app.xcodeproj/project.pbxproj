@@ -38,9 +38,22 @@
 		F932B614E6D452A8F5F59104 /* Pods-roku-app.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-roku-app.release.xcconfig"; path = "Target Support Files/Pods-roku-app/Pods-roku-app.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		414BFE662E7C1C0E0031830D /* Exceptions for "roku-app" folder in "roku-app" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 41A4DC242E6EF96000BD65C0 /* roku-app */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		41A4DC272E6EF96000BD65C0 /* roku-app */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				414BFE662E7C1C0E0031830D /* Exceptions for "roku-app" folder in "roku-app" target */,
+			);
 			path = "roku-app";
 			sourceTree = "<group>";
 		};
@@ -471,8 +484,9 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "roku-app/App/Info.plist";
+				INFOPLIST_FILE = "roku-app/Info.plist";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "TV Remote uses the local network to discover your TV devices. ";
+				INFOPLIST_KEY_UIAppFonts = "Poppins-Regular.ttf Poppins-Bold.ttf Poppins-Light.ttf Poppins-Medium.ttf Poppins-SemiBold.ttf Poppins-ExtraBold.ttf Poppins-Black.ttf Poppins-Thin.ttf Poppins-ExtraLight.ttf Poppins-Italic.ttf Poppins-BoldItalic.ttf Poppins-LightItalic.ttf Poppins-MediumItalic.ttf Poppins-SemiBoldItalic.ttf Poppins-ExtraBoldItalic.ttf Poppins-BlackItalic.ttf Poppins-ThinItalic.ttf Poppins-ExtraLightItalic.ttf";
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
@@ -516,8 +530,9 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "roku-app/App/Info.plist";
+				INFOPLIST_FILE = "roku-app/Info.plist";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "TV Remote uses the local network to discover your TV devices. ";
+				INFOPLIST_KEY_UIAppFonts = "Poppins-Regular.ttf Poppins-Bold.ttf Poppins-Light.ttf Poppins-Medium.ttf Poppins-SemiBold.ttf Poppins-ExtraBold.ttf Poppins-Black.ttf Poppins-Thin.ttf Poppins-ExtraLight.ttf Poppins-Italic.ttf Poppins-BoldItalic.ttf Poppins-LightItalic.ttf Poppins-MediumItalic.ttf Poppins-SemiBoldItalic.ttf Poppins-ExtraBoldItalic.ttf Poppins-BlackItalic.ttf Poppins-ThinItalic.ttf Poppins-ExtraLightItalic.ttf";
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
