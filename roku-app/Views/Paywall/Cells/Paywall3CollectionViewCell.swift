@@ -44,7 +44,6 @@ class Paywall3CollectionViewCell: UICollectionViewCell {
     
     override var isSelected: Bool {
         didSet {
-            // Selection handling
         }
     }
     

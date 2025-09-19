@@ -87,7 +87,7 @@ class PaywallManager {
         let isOnClosePaywall = placementId == PaywallPlacement.onclose.rawValue
         
         if paywallName.contains("paywall1") {
-            return Paywall1ViewController(placementId: placementId)
+            return Paywall1ViewController(placementId: placementId, isOnClosePaywall: isOnClosePaywall)
         } else if paywallName.contains("paywall2") {
             return Paywall2ViewController(placementId: placementId, isOnClosePaywall: isOnClosePaywall)
         } else if paywallName.contains("paywall3") {
@@ -95,7 +95,7 @@ class PaywallManager {
         } else if paywallName.contains("paywall4") {
             return Paywall2ViewController(placementId: placementId, isOnClosePaywall: isOnClosePaywall)
         } else {
-            return Paywall1ViewController(placementId: placementId)
+            return Paywall1ViewController(placementId: placementId, isOnClosePaywall: isOnClosePaywall)
         }
     }
     

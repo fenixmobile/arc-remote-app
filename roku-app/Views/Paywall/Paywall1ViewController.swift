@@ -21,9 +21,11 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     var webView: WKWebView!
     var fxPaywall: FXPaywall?
     var placementId: String
+    var isOnClosePaywall: Bool = false
     
-    init(placementId: String = "onboarding") {
+    init(placementId: String = "onboarding", isOnClosePaywall: Bool = false) {
         self.placementId = placementId
+        self.isOnClosePaywall = isOnClosePaywall
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -176,52 +178,96 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         setupConstraints()
         setupPurchaseCompletion()
         
-        guard let fxPaywall = fxPaywall else { return }
-        if let remoteConfig = fxPaywall.remoteConfig {
-            self.configArray = remoteConfig.map { ($0, $1) }
-            
-            for (key, value) in configArray {
-                print("Key: \(key), Value: \(value)")
-            }
-            
-            if let featuresArray = remoteConfig["features"] as? [String] {
-                featuresArray.enumerated().forEach {
-                    self.features.append(.init(title: $1, iconName: "label\($0+1)"))
-                }
-                print("Features Array: \(featuresArray)")
-            }
-            
-            if let paywallButton = remoteConfig["purchase_button_title"] as? String {
-                self.startFreeTrialButton.setTitle(paywallButton, for: .normal)
-            }
-            
-            if let paywallTitle = remoteConfig["title"] as? String {
-                self.InAppTitle.text = paywallTitle
-            }
-            
-            if let productTitleArray = remoteConfig["product_titles"] as? [String],
-               let productSubtitleArray = remoteConfig["product_subtitles"] as? [String],
-               let fxProducts = fxPaywall.products {
-                self.products.removeAll()
-                for i in 0..<min(productTitleArray.count, fxProducts.count) {
-                  
-                    guard let price = fxProducts[i].price?.description else { continue }
-                    self.products.append(.init(
-                        identifier: fxProducts[i].productId,
-                        title: productTitleArray[i].replacingOccurrences(of: "#price#", with: price),
-                        subTitle: productSubtitleArray[i].replacingOccurrences(of: "#price#", with: price),
-                        price: price,
-                        selected: i == 0
-                    ))
+        loadPaywallData()
+    }
+    
+    private func loadPaywallData() {
+        PaywallHelper.shared.loadPaywall(placementId: placementId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let paywall):
+                    self?.fxPaywall = paywall
+                    PaywallHelper.shared.loadProducts(paywall: paywall) { [weak self] productsResult in
+                        DispatchQueue.main.async {
+                            switch productsResult {
+                            case .success:
+                                print("Paywall1ViewController: Products loaded successfully")
+                                self?.loadPaywallConfiguration()
+                            case .failure(let error):
+                                print("Paywall1ViewController: Failed to load products: \(error)")
+                                self?.loadPaywallConfiguration()
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    print("Paywall1ViewController: Failed to load paywall: \(error)")
                 }
             }
-            if let paywallButtonColor: String = remoteConfig["purchase_button_color_dark"] as? String {
-                self.startFreeTrialButton.backgroundColor = UIColor(named: paywallButtonColor)
-            }
-            
         }
-        self.collectionView.reloadData()
-        self.tableView.reloadData()
+    }
+    
+    func loadPaywallConfiguration() {
+        guard let fxPaywall = fxPaywall else { 
+            print("Paywall1ViewController: fxPaywall is nil, waiting for remote config...")
+            return 
+        }
+        
+        if let remoteConfig = fxPaywall.remoteConfig {
+            print("Paywall1ViewController: Remote config loaded, updating UI...")
+            updateUIWithRemoteConfig(remoteConfig: remoteConfig, fxPaywall: fxPaywall)
+        } else {
+            print("Paywall1ViewController: Remote config is nil, waiting...")
+        }
+    }
+    
+    func updateUIWithRemoteConfig(remoteConfig: [String: Any], fxPaywall: FXPaywall) {
+        self.configArray = remoteConfig.map { ($0, $1) }
+        
+        for (key, value) in configArray {
+            print("Key: \(key), Value: \(value)")
+        }
+        
+        if let featuresArray = remoteConfig["features"] as? [String] {
+            self.features.removeAll()
+            featuresArray.enumerated().forEach {
+                self.features.append(.init(title: $1, iconName: "label\($0+1)"))
+            }
+            print("Features Array: \(featuresArray)")
+        }
+        
+        if let paywallButton = remoteConfig["purchase_button_title"] as? String {
+            self.startFreeTrialButton.setTitle(paywallButton, for: .normal)
+        }
+        
+        if let paywallTitle = remoteConfig["title"] as? String {
+            self.InAppTitle.text = paywallTitle
+        }
+        
+        if let productTitleArray = remoteConfig["product_titles"] as? [String],
+           let productSubtitleArray = remoteConfig["product_subtitles"] as? [String],
+           let fxProducts = fxPaywall.products {
+            self.products.removeAll()
+            for i in 0..<min(productTitleArray.count, fxProducts.count) {
+              
+                guard let price = fxProducts[i].localizedPrice else { continue }
+                self.products.append(.init(
+                    identifier: fxProducts[i].productId,
+                    title: productTitleArray[i].replacingOccurrences(of: "#price#", with: price),
+                    subTitle: productSubtitleArray[i].replacingOccurrences(of: "#price#", with: price),
+                    price: price,
+                    selected: i == 0
+                ))
+            }
+        }
+        
+        if let paywallButtonColor: String = remoteConfig["purchase_button_color_dark"] as? String {
+            self.startFreeTrialButton.backgroundColor = UIColor(hexString: paywallButtonColor)
+        }
+        
+        DispatchQueue.main.async {
+            self.collectionView.reloadData()
+            self.tableView.reloadData()
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -324,14 +370,11 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     
     
     private func setupPurchaseCompletion() {
-        // Purchase completion handling will be implemented with Adapty
     }
     
     private func startClaimOfferPurchase() {
         guard let _ = products.first(where: { $0.selected }),
               let _ = fxPaywall else { return }
-        
-        // Purchase logic will be implemented with Adapty
     }
     
     // MARK: - OBJC Functions
@@ -373,10 +416,11 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     }
     
     private func handlePurchaseFailure(error: Error) {
-        guard let paywall = fxPaywall,
-              let remoteConfig = paywall.remoteConfig,
-              let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool,
-              displayOnClosePaywallFailure == true else {
+        print("Paywall1ViewController: handlePurchaseFailure called")
+        print("Paywall1ViewController: fxPaywall exists: \(fxPaywall != nil)")
+        
+        guard let paywall = fxPaywall else {
+            print("Paywall1ViewController: No fxPaywall available")
             let alert = UIAlertController(title: "Purchase Failed", 
                                         message: "Unable to complete purchase. Please try again.", 
                                         preferredStyle: .alert)
@@ -385,14 +429,109 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
             return
         }
         
-        dismiss(animated: true) { [weak self] in
-            guard let self = self else { return }
-            PaywallManager.shared.showPaywall(placement: .onclose, from: self)
+        print("Paywall1ViewController: remoteConfig exists: \(paywall.remoteConfig != nil)")
+        
+        guard let remoteConfig = paywall.remoteConfig else {
+            print("Paywall1ViewController: No remoteConfig available")
+            let alert = UIAlertController(title: "Purchase Failed", 
+                                        message: "Unable to complete purchase. Please try again.", 
+                                        preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+        
+        print("Paywall1ViewController: remoteConfig: \(remoteConfig)")
+        
+        guard let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool else {
+            print("Paywall1ViewController: display_onClose_paywall_failure not found or not Bool")
+            let alert = UIAlertController(title: "Purchase Failed", 
+                                        message: "Unable to complete purchase. Please try again.", 
+                                        preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+        
+        print("Paywall1ViewController: display_onClose_paywall_failure: \(displayOnClosePaywallFailure)")
+        
+        guard displayOnClosePaywallFailure == true else {
+            print("Paywall1ViewController: display_onClose_paywall_failure is false, showing alert")
+            let alert = UIAlertController(title: "Purchase Failed", 
+                                        message: "Unable to complete purchase. Please try again.", 
+                                        preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+        
+        if isOnClosePaywall {
+            print("Paywall1ViewController: Already onclose paywall, showing alert instead of opening another onclose")
+            let alert = UIAlertController(title: "Purchase Failed", 
+                                        message: "Unable to complete purchase. Please try again.", 
+                                        preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+        
+        print("Paywall1ViewController: display_onClose_paywall_failure is true, dismissing and showing onclose paywall")
+        let presentingVC = presentingViewController
+        dismiss(animated: true) {
+            print("Paywall1ViewController: Dismiss completed, showing onclose paywall")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if let presentingVC = presentingVC {
+                    PaywallManager.shared.showPaywall(placement: .onclose, from: presentingVC)
+                } else {
+                    print("Paywall1ViewController: No presenting view controller found")
+                }
+            }
         }
     }
     
     @objc func closeButtonTapped() {
-        close()
+        print("Paywall1ViewController: Close button tapped")
+        if shouldShowOnClosePaywall() {
+            print("Paywall1ViewController: Should show onclose paywall")
+            showOnClosePaywall()
+        } else {
+            print("Paywall1ViewController: Normal dismiss")
+            dismiss(animated: true, completion: nil)
+        }
+    }
+    
+    private func shouldShowOnClosePaywall() -> Bool {
+        print("Paywall1ViewController: shouldShowOnClosePaywall - isOnClosePaywall = \(isOnClosePaywall)")
+        
+        if isOnClosePaywall {
+            print("Paywall1ViewController: This is already an onclose paywall, not showing another onclose paywall")
+            return false
+        }
+        
+        guard let remoteConfig = fxPaywall?.remoteConfig,
+              let displayOnClose = remoteConfig["display_onClose_paywall"] as? Bool else {
+            print("Paywall1ViewController: No remote config or display_onClose_paywall not found")
+            return false
+        }
+        print("Paywall1ViewController: display_onClose_paywall = \(displayOnClose)")
+        return displayOnClose
+    }
+    
+    private func showOnClosePaywall() {
+        print("Paywall1ViewController: Showing onclose paywall")
+        
+        dismiss(animated: true) { [weak self] in
+            PaywallManager.shared.showPaywall(placement: .onclose, from: self?.presentingViewController ?? UIApplication.shared.windows.first?.rootViewController ?? UIViewController()) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        print("Paywall1ViewController: Onclose paywall shown successfully")
+                    case .failure(let error):
+                        print("Paywall1ViewController: Failed to show onclose paywall: \(error)")
+                    }
+                }
+            }
+        }
     }
     
     @objc func termOfUseLabelTapped() {
@@ -407,7 +546,6 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         self.loadingActivityIndicatorView.isHidden = false
         self.loadingActivityIndicatorView.startAnimating()
         
-        // Restore logic will be implemented with Adapty
         tableView.reloadData()
     }
 }

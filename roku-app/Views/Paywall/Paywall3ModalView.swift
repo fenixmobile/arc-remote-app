@@ -28,7 +28,7 @@ class Paywall3ModalView: UIView {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Upgrade to Pro"
+        label.text = "Choose your plan to unlock all features"
         label.textColor = .white
         label.font = UIFont(name: "Poppins-Bold", size: 26)
         label.numberOfLines = 2
@@ -147,7 +147,6 @@ class Paywall3ModalView: UIView {
         setupViews()
         setupContraints()
         
-        // Load paywall configuration
         loadPaywallConfiguration()
     }
     
@@ -243,8 +242,47 @@ class Paywall3ModalView: UIView {
     }
     
     private func loadPaywallConfiguration() {
-        // Load paywall configuration from Adapty
-        // This will be implemented with Adapty integration
+    }
+    
+    func updateUIWithRemoteConfig(remoteConfig: [String: Any], fxPaywall: FXPaywall) {
+        self.configArray = remoteConfig.map { ($0, $1) }
+        
+        for (key, value) in configArray {
+            print("Paywall3ModalView Key: \(key), Value: \(value)")
+        }
+        
+        if let paywallTitle = remoteConfig["title"] as? String {
+            self.titleLabel.text = paywallTitle
+        }
+        
+        if let paywallButton = remoteConfig["purchase_button_title"] as? String {
+            self.continueButton.setTitle(paywallButton, for: .normal)
+        }
+        
+        if let paywallButtonColor: String = remoteConfig["purchase_button_color"] as? String {
+            self.continueButton.backgroundColor = UIColor(hexString: paywallButtonColor)
+        }
+        
+        if let productTitleArray = remoteConfig["product_titles"] as? [String],
+           let productSubtitleArray = remoteConfig["product_subtitles"] as? [String],
+           let fxProducts = fxPaywall.products {
+            self.products.removeAll()
+            for i in 0..<min(productTitleArray.count, fxProducts.count) {
+              
+                guard let price = fxProducts[i].localizedPrice else { continue }
+                self.products.append(.init(
+                    identifier: fxProducts[i].productId,
+                    title: productTitleArray[i].replacingOccurrences(of: "#price#", with: price),
+                    subTitle: productSubtitleArray[i].replacingOccurrences(of: "#price#", with: price),
+                    price: price,
+                    selected: i == 0
+                ))
+            }
+        }
+        
+        DispatchQueue.main.async {
+            self.collectionView.reloadData()
+        }
     }
     
     //MARK: - OBJC Functions

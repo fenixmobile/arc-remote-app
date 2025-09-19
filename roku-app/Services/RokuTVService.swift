@@ -108,11 +108,9 @@ class RokuTVService: BaseTVService {
         }
     }
     
-    // Roku TV komutları için özel HTTP isteği method'u (URLSession ile - proxy bypass)
     private func makeRokuRequest(to url: URL, method: String = "POST", body: Data? = nil) async throws -> Data {
         print("📡 Roku HTTP Request: \(method) \(url)")
         
-        // Özel URLSession configuration - proxy bypass için
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 3.0
         config.timeoutIntervalForResource = 5.0

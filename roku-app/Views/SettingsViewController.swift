@@ -233,9 +233,6 @@ extension SettingsViewController: UITableViewDelegate {
     }
     
     private func openPaywall() {
-        let paywallVC = PaywallViewController()
-        paywallVC.modalPresentationStyle = .overFullScreen
-        paywallVC.modalTransitionStyle = .crossDissolve
-        present(paywallVC, animated: true)
+        PaywallManager.shared.showPaywall(placement: .settings, from: self)
     }
 }

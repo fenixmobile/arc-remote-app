@@ -52,7 +52,6 @@ class LogService {
                 encoder: JSONParameterEncoder.default
             ).serializingData().value
             
-            // Yanıt boş olabilir, bu normal
             let responseString = String(data: response, encoding: .utf8) ?? ""
             print("Log sent successfully, response: '\(responseString)' (length: \(response.count))")
         } catch {

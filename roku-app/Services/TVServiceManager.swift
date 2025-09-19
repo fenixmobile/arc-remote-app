@@ -151,7 +151,6 @@ class TVServiceManager: ObservableObject {
         do {
             try await service.connect()
             print("✅ Bağlantı başarılı!")
-            // Service'de güncellenen port'u device'a yansıt
             if let rokuService = service as? RokuTVService {
                 device.port = rokuService.device.port
                 print("🔗 Roku port güncellendi: \(device.port)")
@@ -271,7 +270,6 @@ extension TVServiceManager: SSDPDiscoveryDelegate {
             try await service.connect()
             print("✅ Discovery sırasında bağlantı başarılı: \(device.name) - \(device.ipAddress):\(device.port)")
             
-            // Service'de güncellenen port'u device'a yansıt
             if let rokuService = service as? RokuTVService {
                 device.port = rokuService.device.port
                 print("🔗 Discovery sırasında Roku port güncellendi: \(device.port)")

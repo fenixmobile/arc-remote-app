@@ -454,7 +454,6 @@ extension SamsungTVService {
         print("🔐 Samsung TV SSL Challenge alındı: \(challenge.protectionSpace.authenticationMethod)")
         print("🔐 Samsung TV Host: \(challenge.protectionSpace.host)")
         
-        // Tüm SSL challenge'ları otomatik olarak kabul et (Node.js'deki gibi SSL devre dışı)
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
             print("🔐 Samsung TV SSL sertifikası tamamen devre dışı bırakılıyor...")
             let credential = URLCredential(trust: challenge.protectionSpace.serverTrust!)

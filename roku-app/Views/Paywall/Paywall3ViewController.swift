@@ -49,16 +49,64 @@ class Paywall3ViewController: UIViewController {
         setupViews()
         setupConstraints()
         setupPurchaseCompletion()
+        setupNotifications()
         
+        loadPaywallData()
+    }
+    
+    private func setupNotifications() {
         NotificationCenter.default.addObserver(self, selector: #selector(modalClosed), name: NSNotification.Name("modalClosed"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(termsOfUse), name: NSNotification.Name("termsOfUse"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(privacyPolicy), name: NSNotification.Name("privacyPolicy"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(restoreLabelTapped), name: NSNotification.Name("restore"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(showAlert), name: NSNotification.Name("ShowAlert"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(showOnClosePaywall), name: NSNotification.Name("ShowOnClosePaywall"), object: nil)
+    }
+    
+    private func loadPaywallData() {
+        PaywallHelper.shared.loadPaywall(placementId: placementId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let paywall):
+                    self?.fxPaywall = paywall
+                    PaywallHelper.shared.loadProducts(paywall: paywall) { [weak self] productsResult in
+                        DispatchQueue.main.async {
+                            switch productsResult {
+                            case .success:
+                                print("Paywall3ViewController: Products loaded successfully")
+                                self?.loadPaywallConfiguration()
+                            case .failure(let error):
+                                print("Paywall3ViewController: Failed to load products: \(error)")
+                                self?.loadPaywallConfiguration()
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    print("Paywall3ViewController: Failed to load paywall: \(error)")
+                }
+            }
+        }
+    }
+    
+    func loadPaywallConfiguration() {
+        guard let fxPaywall = fxPaywall else { 
+            print("Paywall3ViewController: fxPaywall is nil, waiting for remote config...")
+            return 
+        }
         
-        if fxPaywall?.remoteConfig != nil {
-            // Set paywall flags from remote config
+        if let remoteConfig = fxPaywall.remoteConfig {
+            print("Paywall3ViewController: Remote config loaded, updating UI...")
+            updateUIWithRemoteConfig(remoteConfig: remoteConfig, fxPaywall: fxPaywall)
+        } else {
+            print("Paywall3ViewController: Remote config is nil, waiting...")
+        }
+    }
+    
+    func updateUIWithRemoteConfig(remoteConfig: [String: Any], fxPaywall: FXPaywall) {
+        paywall3ModalView.fxPaywall = fxPaywall
+        
+        DispatchQueue.main.async {
+            self.paywall3ModalView.updateUIWithRemoteConfig(remoteConfig: remoteConfig, fxPaywall: fxPaywall)
         }
     }
     
@@ -69,7 +117,6 @@ class Paywall3ViewController: UIViewController {
     //MARK: - Functions
     
     private func setupPurchaseCompletion() {
-        // Purchase completion handling will be implemented with Adapty
     }
     
     private func setupViews() {
@@ -111,8 +158,6 @@ class Paywall3ViewController: UIViewController {
     
     @objc func restoreLabelTapped() {
         paywall3ModalView.loadingActivityIndicatorView.startAnimating()
-        
-        // Restore logic will be implemented with Adapty
     }
     
     @objc func modalClosed() {

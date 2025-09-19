@@ -263,7 +263,6 @@ class Paywall2ViewController: UIViewController {
     }
     
     override func viewDidAppear(_ animated: Bool) {
-        // SessionDataManager.shared.onBoardingSeen = true
     }
     
     //MARK: - Functions
@@ -528,8 +527,6 @@ class Paywall2ViewController: UIViewController {
     private func startClaimOfferPurchase() {
         guard let _ = weeklyProduct,
               let _ = fxPaywall else { return }
-        
-        // Purchase logic will be implemented with Adapty
     }
     
     
