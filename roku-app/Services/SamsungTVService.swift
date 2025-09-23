@@ -556,6 +556,8 @@ extension SamsungTVService {
         "VolumeDown": "KEY_VOLDOWN",
         "VolumeMute": "KEY_MUTE",
         "PowerOn": "KEY_POWERON",
-        "PowerOff": "KEY_POWEROFF"
+        "PowerOff": "KEY_POWEROFF",
+        "Keyboard": "KEY_ENTER",
+        "Backspace": "KEY_BACKSPACE"
     ]
 }

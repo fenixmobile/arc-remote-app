@@ -67,7 +67,7 @@ class FireTVService: BaseTVService, URLSessionDelegate {
         let startTime = Date()
         
         do {
-            _ = try await executeFireTVCommand(fireTVCommand)
+            _ = try await executeFireTVCommand(fireTVCommand, withText: command.command == "Keyboard" ? command.parameters?["text"] as? String : nil)
             let responseTime = Date().timeIntervalSince(startTime)
             
             print("✅ FireTV komut başarılı: \(command.command)")
@@ -202,7 +202,7 @@ class FireTVService: BaseTVService, URLSessionDelegate {
         }
     }
     
-    private func executeFireTVCommand(_ command: String) async throws -> String {
+    private func executeFireTVCommand(_ command: String, withText text: String? = nil) async throws -> String {
         guard let fireTVToken = fireTVToken else {
             throw TVServiceError.commandFailed("No authentication token")
         }
@@ -224,6 +224,12 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             let jsonData = try JSONEncoder().encode(voiceCommand)
             request.httpBody = jsonData
             print("🎤 Alexa voice command parametresi gönderiliyor: Start")
+        } else if command.contains("text") {
+            let textToSend = text ?? "text"
+            let textCommand = FireTVTextRequestDTO(text: textToSend)
+            let jsonData = try JSONEncoder().encode(textCommand)
+            request.httpBody = jsonData
+            print("⌨️ Keyboard text parametresi gönderiliyor: \(textToSend)")
         }
         
         let (data, response) = try await urlSession.data(for: request)
@@ -299,6 +305,10 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             return "FireTV/app/com.spotify.tv.android"
         case "alexa":
             return "FireTV/voiceCommand?action=start"
+        case "keyboard":
+            return "FireTV/text"
+        case "backspace":
+            return "FireTV?action=backspace"
         default:
             return "FireTV?action=home"
         }
@@ -328,7 +338,9 @@ extension FireTVService {
         "YouTube": "FireTV/app/com.amazon.firetv.youtube",
         "Netflix": "FireTV/app/com.netflix.ninja",
         "Spotify": "FireTV/app/com.spotify.tv.android",
-        "Alexa": "FireTV/voiceCommand?action=start"
+        "Alexa": "FireTV/voiceCommand?action=start",
+        "Keyboard": "FireTV/text",
+        "Backspace": "FireTV?action=backspace"
     ]
     
     private func requestPINFromUser(continuation: CheckedContinuation<Void, Never>) async {

@@ -80,6 +80,8 @@ extension SonyTVService {
         "VolumeDown": "AAAAAQAAAAEAAAATAw==",
         "VolumeMute": "AAAAAQAAAAEAAAAUAw==",
         "PowerOn": "AAAAAQAAAAEAAAAVAw==",
-        "PowerOff": "AAAAAQAAAAEAAAAVAw=="
+        "PowerOff": "AAAAAQAAAAEAAAAVAw==",
+        "Keyboard": "AAAAAQAAAAEAAABLAw==",
+        "Backspace": "AAAAAgAAAJcAAABGAw=="
     ]
 }

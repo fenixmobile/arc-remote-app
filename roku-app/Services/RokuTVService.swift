@@ -174,7 +174,9 @@ extension RokuTVService {
         "PowerOff": "PowerOff",
         "Spotify": "Spotify",
         "YouTube": "YouTube",
-        "Netflix": "Netflix"
+        "Netflix": "Netflix",
+        "Keyboard": "Lit",
+        "Backspace": "Backspace"
     ]
     
     private func isAppLaunchCommand(_ command: String) -> Bool {

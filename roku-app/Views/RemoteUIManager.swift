@@ -35,87 +35,104 @@ enum Buttons: Int {
 
 let fireTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let samsungTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let rokuTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let lgTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let lgTVFallbackButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let philipsAndroidTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let philipsNonAndroidTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let sonyTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let tclTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let vizioTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let androidTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let toshibaTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let toshibaTV2Buttons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let panasonicTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let tclAndroidTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let tclNativeTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 let tclRokuTVButtons: [Buttons] = [
     .power,
-    .home
+    .home,
+    .keyboard
 ]
 
 struct RemoteButton {
@@ -1724,6 +1741,8 @@ class RemoteUIManager {
         
         if sender.tag == Buttons.power.rawValue {
             NotificationCenter.default.post(name: NSNotification.Name("PowerButtonPressed"), object: nil)
+        } else if sender.tag == Buttons.keyboard.rawValue {
+            NotificationCenter.default.post(name: NSNotification.Name("KeyboardButtonPressed"), object: nil)
         }
     }
     
