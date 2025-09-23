@@ -298,7 +298,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "back"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.back.rawValue
         return button
     }()
@@ -309,7 +309,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "options"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.options.rawValue
         return button
     }()
@@ -320,7 +320,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "source"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.source.rawValue
         return button
     }()
@@ -331,7 +331,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "samsung.hub"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.smartHub.rawValue
         return button
     }()
@@ -342,7 +342,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "mute"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.mute.rawValue
         return button
     }()
@@ -353,7 +353,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "color.shortcut"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.colorsShortcut.rawValue
         return button
     }()
@@ -364,7 +364,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "increase"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.increase.rawValue
         return button
     }()
@@ -375,7 +375,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "decrease"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.decrease.rawValue
         return button
     }()
@@ -386,7 +386,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "channelUp"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.channelUp.rawValue
         return button
     }()
@@ -397,7 +397,7 @@ class RemoteUIManager {
         button.layer.masksToBounds = true
         button.contentMode = .scaleAspectFit
         button.setImage(UIImage(named: "channelDown"), for: .normal)
-        button.addTarget(self, action: #selector(buttonAction), for: .touchUpInside)
+        button.addTarget(RemoteUIManager.shared, action: #selector(buttonAction), for: .touchUpInside)
         button.tag = Buttons.channeldown.rawValue
         return button
     }()
@@ -1703,7 +1703,7 @@ class RemoteUIManager {
         }
     }
     
-    @objc private func buttonAction(sender: UIButton) {
+    @objc func buttonAction(sender: UIButton) {
         guard let device = TVServiceManager.shared.currentDevice else {
             print("❌ RemoteUIManager: currentDevice nil")
             return
@@ -1720,6 +1720,10 @@ class RemoteUIManager {
                     print("❌ RemoteUIManager: Komut gönderme hatası: \(error.localizedDescription)")
                 }
             }
+        }
+        
+        if sender.tag == Buttons.power.rawValue {
+            NotificationCenter.default.post(name: NSNotification.Name("PowerButtonPressed"), object: nil)
         }
     }
     

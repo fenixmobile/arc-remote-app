@@ -74,6 +74,7 @@ class TVRemoteViewController: UIViewController {
         setupViews()
         setupConstraints()
         setupBindings()
+        setupNotificationObservers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -146,15 +147,30 @@ class TVRemoteViewController: UIViewController {
     
     private func setupDefaultUI() {
         RemoteUIManager.shared.setupMainStackView(view: remoteButtonsView)
-        RemoteUIManager.shared.allRemoteButtons.forEach { button in
-            button.addTarget(self, action: #selector(buttonAction(sender:)), for: .touchUpInside)
-        }
         RemoteUIManager.shared.setupDefaultViews(view: remoteButtonsView)
         RemoteUIManager.shared.setupConstraints(safeArea: remoteButtonsView.safeAreaLayoutGuide, startLayoutMarginGuide: remoteButtonsView.layoutMarginsGuide)
         
-        RemoteUIManager.shared.defaultButtons.forEach { button in
-            button.addTarget(self, action: #selector(buttonAction(sender:)), for: .touchUpInside)
+        RemoteUIManager.shared.allRemoteButtons.forEach { button in
+            button.addTarget(RemoteUIManager.shared, action: #selector(RemoteUIManager.buttonAction), for: .touchUpInside)
         }
+        RemoteUIManager.shared.defaultButtons.forEach { button in
+            button.addTarget(RemoteUIManager.shared, action: #selector(RemoteUIManager.buttonAction), for: .touchUpInside)
+        }
+    }
+    
+    private func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePowerButtonPressed),
+            name: NSNotification.Name("PowerButtonPressed"),
+            object: nil
+        )
+    }
+    
+    @objc private func handlePowerButtonPressed() {
+        connectionStatusLabel.text = "Not Connected"
+        status.image = UIImage(named: "not.connected")
+        disconnectDevice()
     }
     
     private func setTvServiceStateListener() {
@@ -185,28 +201,6 @@ class TVRemoteViewController: UIViewController {
         }
     }
     
-    @objc func buttonAction(sender: UIButton) {
-        guard let device = viewModel.currentDevice else {
-            print("❌ TVRemoteViewController: currentDevice nil, DeviceDiscoveryViewController açılıyor")
-            showDeviceList()
-            return
-        }
-        
-        print("✅ TVRemoteViewController: Kumanda butonu basıldı - \(device.displayName)")
-        
-        if let event: TVRemoteEvent = .init(rawValue: sender.tag) {
-            sendTVRemoteEvent(event)
-        }
-        
-        switch sender.tag {
-        case Buttons.power.rawValue:
-            connectionStatusLabel.text = "Not Connected"
-            status.image = UIImage(named: "not.connected")
-            disconnectDevice()
-        default:
-            break
-        }
-    }
     
     func sendTVRemoteEvent(_ event: TVRemoteEvent) {
         guard let device = viewModel.currentDevice else { return }

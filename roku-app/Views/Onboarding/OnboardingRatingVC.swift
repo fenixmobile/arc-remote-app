@@ -8,6 +8,7 @@
 import Foundation
 import UIKit
 import StoreKit
+import FXFramework
 
 class OnboardingRatingVC: UIViewController {
     
@@ -217,15 +218,84 @@ class OnboardingRatingVC: UIViewController {
     }
     
     @objc func closeButtonTapped() {
-        if let parentViewController = parent as? PageViewController {
-            parentViewController.showNextPage()
-        }
+        self.showPaywall()
     }
     
     private func showPaywall() {
         UserDefaultsManager.shared.markOnboardingCompleted()
+        UserDefaultsManager.shared.markOnboardingPaywallSeen()
         
-        PaywallManager.shared.showDynamicPaywall(placementId: "onboarding", from: self)
+        PaywallHelper.shared.loadPaywall(placementId: "onboarding") { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let paywall):
+                    PaywallHelper.shared.loadProducts(paywall: paywall) { [weak self] productsResult in
+                        DispatchQueue.main.async {
+                            switch productsResult {
+                            case .success:
+                                self?.presentPaywallWithTransition(paywall: paywall)
+                            case .failure(let error):
+                                print("Failed to load products: \(error)")
+                                self?.presentPaywallWithTransition(paywall: paywall)
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    print("Failed to load paywall: \(error)")
+                    self?.presentDefaultPaywall()
+                }
+            }
+        }
+    }
+    
+    private func presentPaywallWithTransition(paywall: FXPaywall) {
+        let paywallVC = createPaywallViewController(for: paywall)
+        
+        DispatchQueue.main.async {
+            paywallVC.modalPresentationStyle = .fullScreen
+            paywallVC.modalTransitionStyle = .crossDissolve
+            
+            let transition = CATransition()
+            transition.duration = 0.3
+            transition.type = .push
+            transition.subtype = .fromRight
+            self.view.window?.layer.add(transition, forKey: kCATransition)
+            
+            self.present(paywallVC, animated: false)
+        }
+    }
+    
+    private func presentDefaultPaywall() {
+        let paywallVC = Paywall1ViewController(placementId: "onboarding")
+        
+        DispatchQueue.main.async {
+            paywallVC.modalPresentationStyle = .fullScreen
+            paywallVC.modalTransitionStyle = .crossDissolve
+            
+            let transition = CATransition()
+            transition.duration = 0.3
+            transition.type = .push
+            transition.subtype = .fromRight
+            self.view.window?.layer.add(transition, forKey: kCATransition)
+            
+            self.present(paywallVC, animated: false)
+        }
+    }
+    
+    private func createPaywallViewController(for paywall: FXPaywall) -> UIViewController {
+        let paywallName = paywall.name.lowercased()
+        
+        if paywallName.contains("paywall1") {
+            return Paywall1ViewController(placementId: "onboarding")
+        } else if paywallName.contains("paywall2") {
+            return Paywall2ViewController(placementId: "onboarding")
+        } else if paywallName.contains("paywall3") {
+            return Paywall3ViewController(placementId: "onboarding")
+        } else if paywallName.contains("paywall4") {
+            return Paywall2ViewController(placementId: "onboarding")
+        } else {
+            return Paywall1ViewController(placementId: "onboarding")
+        }
     }
 }
 

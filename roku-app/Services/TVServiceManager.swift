@@ -15,9 +15,7 @@ class TVServiceManager: ObservableObject {
 
     private let networkMonitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")
-    
-    private var ssdpClients: [SSDPDiscovery] = []
-    private var scanCompletion: (([TVDevice], Bool) -> Void)?
+    private let discoveryManager = DeviceDiscoveryManager()
     private var currentService: TVServiceProtocol?
 
     init() {
@@ -26,67 +24,20 @@ class TVServiceManager: ObservableObject {
     }
 
     private func setupServices() {
+        discoveryManager.delegate = self
     }
 
     func startDiscovery() {
         DispatchQueue.main.async {
             self.isDiscovering = true
-            self.discoveryMessage = "Cihazlar aranıyor..."
             self.discoveredDevices = []
         }
-
-        scanCompletion = { [weak self] devices, isFinished in
-            DispatchQueue.main.async {
-                if !devices.isEmpty {
-                    for device in devices {
-                        if let self = self, !self.discoveredDevices.contains(where: { $0.ipAddress == device.ipAddress }) {
-                            self.discoveredDevices.append(device)
-                        }
-                    }
-                    self?.updateDiscoveryMessage()
-                }
-                
-                if isFinished {
-                    self?.isDiscovering = false
-                    self?.updateDiscoveryMessage()
-                }
-            }
-        }
-
-        startSSDPDiscovery()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
-            self?.stopDiscovery()
-        }
+        discoveryManager.startDiscovery()
     }
 
     func stopDiscovery() {
-        ssdpClients.forEach { $0.stop() }
-        ssdpClients.removeAll()
-        
-        DispatchQueue.main.async {
-            self.isDiscovering = false
-            self.updateDiscoveryMessage()
-        }
-    }
-
-    private func startSSDPDiscovery() {
-        let searchTargets = [
-            "urn:dial-multiscreen-org:service:dial:1",
-            "urn:lge-com:service:webos-second-screen:1", 
-            "roku:ecp",
-            "ssdp:all"
-        ]
-
-        for (index, target) in searchTargets.enumerated() {
-            let client = SSDPDiscovery()
-            client.delegate = self
-            ssdpClients.append(client)
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.2) { [weak self] in
-                client.discoverService(forDuration: 3, searchTarget: target)
-            }
-        }
+        discoveryManager.stopDiscovery()
     }
 
     private func updateDiscoveryMessage() {
@@ -214,159 +165,26 @@ class TVServiceManager: ObservableObject {
     }
 }
 
-extension TVServiceManager: SSDPDiscoveryDelegate {
-    func ssdpDiscovery(_ discovery: SSDPDiscovery, didDiscoverService service: SSDPService) {
-        guard let location = service.location,
-              let host = service.host else { return }
-        
-        getDeviceInfo(urlStr: location, host: host)
-    }
-    
-    func ssdpDiscovery(_ discovery: SSDPDiscovery, didFinishWithError error: Error) {
-        print("SSDP Discovery error: \(error)")
-    }
-    
-    func ssdpDiscoveryDidStart(_ discovery: SSDPDiscovery) {
-        print("SSDP Discovery started")
-    }
-    
-    func ssdpDiscoveryDidFinish(_ discovery: SSDPDiscovery) {
-        print("SSDP Discovery finished")
-    }
-    
-    private func getDeviceInfo(urlStr: String, host: String) {
-        guard let url = URL(string: urlStr) else { return }
-        
-        let port = url.port ?? 8080
-        
-        
-        var urlRequest = URLRequest(url: url)
-        urlRequest.timeoutInterval = 3
-        urlRequest.httpMethod = "GET"
-        
-        URLSession.shared.dataTask(with: urlRequest) { [weak self] data, response, error in
-            if let data = data {
-                if let response: SharedTVDTO = self?.decode(data) {
-                    self?.addDevice(sharedTVDTO: response, host: host, port: port)
-                }
-            }
-        }.resume()
-    }
-    
-    private func decode<Response: Decodable>(_ data: Data) -> Response? {
-        do {
-            let decoder = XMLDecoder()
-            let response = try decoder.decode(Response.self, from: data)
-            return response
-        } catch {
-            return nil
-        }
-    }
-    
-    private func testDeviceConnection(_ device: inout TVDevice) async {
-        let service = getService(for: device)
-        
-        do {
-            try await service.connect()
-            print("✅ Discovery sırasında bağlantı başarılı: \(device.name) - \(device.ipAddress):\(device.port)")
-            
-            if let rokuService = service as? RokuTVService {
-                device.port = rokuService.device.port
-                print("🔗 Discovery sırasında Roku port güncellendi: \(device.port)")
-            } else if let samsungService = service as? SamsungTVService {
-                device.port = samsungService.device.port
-                print("🔗 Discovery sırasında Samsung port güncellendi: \(device.port)")
-            }
-            
-            let finalDevice = device
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                if !self.connectedDevices.contains(where: { $0.id == finalDevice.id }) {
-                    self.connectedDevices.append(finalDevice)
-                }
-            }
-        } catch {
-            print("❌ Discovery sırasında bağlantı başarısız: \(device.name) - \(error)")
-        }
-    }
-    
-    private func addDevice(sharedTVDTO: SharedTVDTO, host: String, port: Int = 8080) {
-        guard let manufacturer = sharedTVDTO.device?.manufacturer?.lowercased() else { return }
-        guard let modelName = sharedTVDTO.device?.modelName?.lowercased() else { return }
-        
-        let brand: TVBrand
-        let deviceName = sharedTVDTO.device?.friendlyDeviceName ?? "Unknown Device"
-        
-        switch manufacturer {
-        case _ where manufacturer.contains("samsung"):
-            brand = .samsung
-        case _ where manufacturer.contains("roku"):
-            brand = .roku
-        case _ where manufacturer.contains("amazon"):
-            brand = .fireTV
-        case _ where manufacturer.contains("sony"):
-            brand = .sony
-        case _ where manufacturer.contains("lg"):
-            brand = .lg
-        case _ where manufacturer.contains("tcl") && !manufacturer.contains("roku") && !manufacturer.contains("amazon"):
-            brand = .tcl
-        case _ where manufacturer.contains("vizio"):
-            brand = .vizio
-        case _ where manufacturer.contains("android") && !manufacturer.contains("roku") && !manufacturer.contains("amazon") && !manufacturer.contains("tcl") && !manufacturer.contains("philips") && !manufacturer.contains("lg") && !manufacturer.contains("sony") && !manufacturer.contains("samsung"):
-            brand = .androidTV
-        case _ where manufacturer.contains("xiaomi"):
-            brand = .androidTV
-        case _ where manufacturer.contains("toshiba"):
-            brand = .toshiba
-        case _ where manufacturer.contains("panasonic"):
-            brand = .panasonic
-        case _ where modelName.contains("philips"):
-            brand = .philipsAndroid
-        default:
-            return
-        }
-        
-        let finalDeviceName: String
-        if deviceName == "Unknown Device" {
-            let friendlyName = sharedTVDTO.device?.friendlyName ?? ""
-            let modelName = sharedTVDTO.device?.modelName ?? ""
-            let modelNumber = sharedTVDTO.device?.modelNumber ?? ""
-            let brandName = brand.displayName
-            
-            if !friendlyName.isEmpty {
-                finalDeviceName = friendlyName
-            } else if !modelName.isEmpty {
-                if brand == .samsung && !modelNumber.isEmpty {
-                    finalDeviceName = "\(brandName) \(modelName) \(modelNumber) TV"
-                } else if brand == .roku || brand == .androidTV {
-                    finalDeviceName = modelName
-                } else if brand == .philipsAndroid {
-                    finalDeviceName = "\(brandName) \(modelName)"
-                } else {
-                    finalDeviceName = "\(brandName) \(modelName)"
-                }
-            } else {
-                finalDeviceName = "\(brandName) TV"
-            }
-        } else {
-            finalDeviceName = deviceName
-        }
-        
-        var device = TVDevice(
-            name: finalDeviceName,
-            brand: brand,
-            ipAddress: host,
-            port: port
-        )
-        
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
+extension TVServiceManager: DeviceDiscoveryDelegate {
+    func didDiscoverDevice(_ device: TVDevice) {
+        DispatchQueue.main.async {
             if !self.discoveredDevices.contains(where: { $0.ipAddress == device.ipAddress }) {
                 self.discoveredDevices.append(device)
                 self.updateDiscoveryMessage()
             }
+        }
+    }
+    
+    func didFinishDiscovery() {
+        DispatchQueue.main.async {
+            self.isDiscovering = false
+            self.updateDiscoveryMessage()
+        }
+    }
+    
+    func didUpdateDiscoveryMessage(_ message: String) {
+        DispatchQueue.main.async {
+            self.discoveryMessage = message
         }
     }
 }

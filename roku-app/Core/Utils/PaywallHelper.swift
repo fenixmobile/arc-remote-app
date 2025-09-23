@@ -30,8 +30,7 @@ class PaywallHelper {
     static let shared = PaywallHelper()
     
     private var fxPurchase: FXPurchase?
-    private var paywalls: [String: FXPaywall] = [:]
-    private var products: [String: [FXProduct]] = [:]
+    private let cacheManager = PaywallCacheManager.shared
     
     private init() {
         setupFXPurchase()
@@ -47,7 +46,7 @@ class PaywallHelper {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let paywall):
-                    self?.paywalls[placementId] = paywall
+                    self?.cacheManager.storePaywall(paywall, for: placementId)
                     completion(.success(paywall))
                 case .failure(let error):
                     completion(.failure(error))
@@ -61,7 +60,7 @@ class PaywallHelper {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let products):
-                    self?.products[paywall.name] = products
+                    self?.cacheManager.storeProducts(products, for: paywall.name)
                     completion(.success(products))
                 case .failure(let error):
                     completion(.failure(error))
@@ -71,7 +70,7 @@ class PaywallHelper {
     }
     
     func loadProducts(placementId: String, completion: @escaping (Result<[FXProduct], Error>) -> Void) {
-        guard let paywall = paywalls[placementId] else {
+        guard let paywall = cacheManager.getPaywall(for: placementId) else {
             completion(.failure(PaywallError.paywallNotLoaded))
             return
         }
@@ -106,25 +105,23 @@ class PaywallHelper {
     }
     
     func getPaywall(placementId: String) -> FXPaywall? {
-        return paywalls[placementId]
+        return cacheManager.getPaywall(for: placementId)
     }
     
     func getProducts(placementId: String) -> [FXProduct]? {
-        return products[placementId]
+        return cacheManager.getProducts(for: placementId)
     }
     
     func getPaywallData(placementId: String) -> [String: Any]? {
-        return paywalls[placementId]?.remoteConfig
+        return cacheManager.getPaywallData(for: placementId)
     }
     
     func clearCache(placementId: String) {
-        paywalls.removeValue(forKey: placementId)
-        products.removeValue(forKey: placementId)
+        cacheManager.clearCache(for: placementId)
     }
     
     func clearAllCache() {
-        paywalls.removeAll()
-        products.removeAll()
+        cacheManager.clearAllCache()
     }
 }
 

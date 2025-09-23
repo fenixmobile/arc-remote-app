@@ -14,11 +14,8 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     
     //MARK: - Properties
     
-    var selectedIndexPath: IndexPath?
-    var configArray: [(key: String, value: Any)] = []
     var features: [PaywallFeature] = []
     var products: [Product] = []
-    var webView: WKWebView!
     var fxPaywall: FXPaywall?
     var placementId: String
     var isOnClosePaywall: Bool = false
@@ -34,139 +31,62 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         super.init(coder: coder)
     }
     
-    // MARK: - PaywallNavigationManager Properties
-    var displayClaimOfferAlert: Bool = false
-    var displayOncloseModal: Bool = false
-    var displayOnclosePaywallFailure: Bool = false
-    var closeCompletion: (() -> Void)?
-    var onDismiss: (() -> Void)?
     
     //MARK: - UI Elements
     
-    lazy var imageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.contentMode = .scaleAspectFill
-        imageView.image = UIImage(named: "paywall1")
-        return imageView
-    }()
+    lazy var imageView: UIImageView = Paywall1UIFactory.createImageView()
     
-    lazy var InAppTitle: UILabel = {
-        let label: UILabel = .init()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.textColor = UIColor(named: "title")
-        label.textAlignment = .center
-        label.numberOfLines = 1
-        label.backgroundColor = UIColor(named: "primary")?.withAlphaComponent(0.5)
-        label.text = "Upgrade to Pro"
-        label.font = UIFont(name: "Poppins-SemiBold", size: 22)
-        return label
-    }()
+    lazy var InAppTitle: UILabel = Paywall1UIFactory.createTitleLabel()
     
     lazy var tableView: UITableView = {
-        let tableView = UITableView()
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.register(InAppTableCell.self, forCellReuseIdentifier: InAppTableCell.reuseIdentifier)
+        let tableView = Paywall1UIFactory.createTableView()
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.isUserInteractionEnabled = false
-        tableView.backgroundColor = UIColor(named: "primary")
-        tableView.layer.cornerRadius = 25
         return tableView
     }()
     
     lazy var startFreeTrialButton: UIButton = {
-        let button = UIButton()
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitleColor(UIColor.white, for: .normal)
-        button.titleLabel?.font = UIFont(name: "Poppins-Medium", size: 16)
-        button.backgroundColor = UIColor(named: "button")
-        button.layer.cornerRadius = 25
+        let button = Paywall1UIFactory.createPurchaseButton()
         button.addTarget(self, action: #selector(startFreeTrialButtonTapped), for: .touchUpInside)
         return button
     }()
     
     lazy var closeButton: UIButton = {
-        let button = UIButton()
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(named: "close2"), for: .normal)
-        button.accessibilityIdentifier = "PaywallCloseButton"
+        let button = Paywall1UIFactory.createCloseButton()
         button.addTarget(self, action: #selector(closeButtonTapped), for: .touchUpInside)
-        button.layer.zPosition = 2
         return button
     }()
     
     lazy var collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = 20
-        layout.minimumLineSpacing = 20
-        layout.scrollDirection = .horizontal
-        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.backgroundColor = .clear
+        let collectionView = Paywall1UIFactory.createCollectionView()
         collectionView.delegate = self
         collectionView.dataSource = self
-        collectionView.register(InAppCell.self, forCellWithReuseIdentifier: InAppCell.reuseIdentifier)
         return collectionView
     }()
     
     lazy var restoreLabel: UIButton = {
-        let button: UIButton = .init(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitleColor(UIColor(named: "subtitle"), for: .normal)
-        button.titleLabel?.textAlignment = .center
-        button.titleLabel?.numberOfLines = 1
-        button.setTitle("Restore", for: .normal)
-        button.titleLabel?.font = UIFont(name: "Poppins-Light", size: 12)
+        let button = Paywall1UIFactory.createRestoreButton()
         button.addTarget(self, action: #selector(restoreLabelTapped), for: .touchUpInside)
         return button
     }()
     
-    lazy var lineView2: UIView = {
-        let view: UIView = .init()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = UIColor(named: "subtitle")
-        return view
-    }()
+    lazy var lineView2: UIView = Paywall1UIFactory.createSeparatorLine()
     
     lazy var termOfUseLabel: UIButton = {
-        let button: UIButton = .init(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitleColor(UIColor(named: "subtitle"), for: .normal)
-        button.titleLabel?.textAlignment = .center
-        button.titleLabel?.numberOfLines = 1
-        button.setTitle("Terms of Use", for: .normal)
-        button.titleLabel?.font = UIFont(name: "Poppins-Light", size: 12)
+        let button = Paywall1UIFactory.createTermsButton()
         button.addTarget(self, action: #selector(termOfUseLabelTapped), for: .touchUpInside)
         return button
     }()
     
-    lazy var lineView: UIView = {
-        let view: UIView = .init()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = UIColor(named: "subtitle")
-        return view
-    }()
+    lazy var lineView: UIView = Paywall1UIFactory.createSeparatorLine()
     
     lazy var privacyPolicyLabel: UIButton = {
-        let button: UIButton = .init(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitleColor(UIColor(named: "subtitle"), for: .normal)
-        button.titleLabel?.textAlignment = .center
-        button.titleLabel?.numberOfLines = 1
-        button.setTitle("Privacy Policy", for: .normal)
-        button.titleLabel?.font = UIFont(name: "Poppins-Light", size: 12)
+        let button = Paywall1UIFactory.createPrivacyButton()
         button.addTarget(self, action: #selector(privacyPolicyLabelTapped), for: .touchUpInside)
         return button
     }()
     
-    lazy var loadingActivityIndicatorView: UIActivityIndicatorView = {
-        let activityIndicatorView: UIActivityIndicatorView = .init()
-        activityIndicatorView.translatesAutoresizingMaskIntoConstraints = false
-        activityIndicatorView.style = .large
-        activityIndicatorView.color = .white
-        return activityIndicatorView
-    }()
+    lazy var loadingActivityIndicatorView: UIActivityIndicatorView = Paywall1UIFactory.createLoadingIndicator()
     
     
     //MARK: - Life Cycle
@@ -176,7 +96,6 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         view.backgroundColor = .white
         setupViews()
         setupConstraints()
-        setupPurchaseCompletion()
         
         loadPaywallData()
     }
@@ -221,48 +140,11 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     }
     
     func updateUIWithRemoteConfig(remoteConfig: [String: Any], fxPaywall: FXPaywall) {
-        self.configArray = remoteConfig.map { ($0, $1) }
-        
-        for (key, value) in configArray {
-            print("Key: \(key), Value: \(value)")
-        }
-        
-        if let featuresArray = remoteConfig["features"] as? [String] {
-            self.features.removeAll()
-            featuresArray.enumerated().forEach {
-                self.features.append(.init(title: $1, iconName: "label\($0+1)"))
-            }
-            print("Features Array: \(featuresArray)")
-        }
-        
-        if let paywallButton = remoteConfig["purchase_button_title"] as? String {
-            self.startFreeTrialButton.setTitle(paywallButton, for: .normal)
-        }
-        
-        if let paywallTitle = remoteConfig["title"] as? String {
-            self.InAppTitle.text = paywallTitle
-        }
-        
-        if let productTitleArray = remoteConfig["product_titles"] as? [String],
-           let productSubtitleArray = remoteConfig["product_subtitles"] as? [String],
-           let fxProducts = fxPaywall.products {
-            self.products.removeAll()
-            for i in 0..<min(productTitleArray.count, fxProducts.count) {
-              
-                guard let price = fxProducts[i].localizedPrice else { continue }
-                self.products.append(.init(
-                    identifier: fxProducts[i].productId,
-                    title: productTitleArray[i].replacingOccurrences(of: "#price#", with: price),
-                    subTitle: productSubtitleArray[i].replacingOccurrences(of: "#price#", with: price),
-                    price: price,
-                    selected: i == 0
-                ))
-            }
-        }
-        
-        if let paywallButtonColor: String = remoteConfig["purchase_button_color_dark"] as? String {
-            self.startFreeTrialButton.backgroundColor = UIColor(hexString: paywallButtonColor)
-        }
+        updateFeatures(from: remoteConfig)
+        updateButtonConfiguration(from: remoteConfig)
+        updateTitle(from: remoteConfig)
+        updateProducts(from: remoteConfig, fxPaywall: fxPaywall)
+        updateButtonColor(from: remoteConfig)
         
         DispatchQueue.main.async {
             self.collectionView.reloadData()
@@ -270,9 +152,53 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         }
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-
+    private func updateFeatures(from remoteConfig: [String: Any]) {
+        guard let featuresArray = remoteConfig["features"] as? [String] else { return }
+        
+        features.removeAll()
+        featuresArray.enumerated().forEach {
+            features.append(.init(title: $1, iconName: "label\($0+1)"))
+        }
     }
+    
+    private func updateButtonConfiguration(from remoteConfig: [String: Any]) {
+        if let buttonTitle = remoteConfig["purchase_button_title"] as? String {
+            startFreeTrialButton.setTitle(buttonTitle, for: .normal)
+        }
+    }
+    
+    private func updateTitle(from remoteConfig: [String: Any]) {
+        if let title = remoteConfig["title"] as? String {
+            InAppTitle.text = title
+        }
+    }
+    
+    private func updateProducts(from remoteConfig: [String: Any], fxPaywall: FXPaywall) {
+        guard let productTitleArray = remoteConfig["product_titles"] as? [String],
+              let productSubtitleArray = remoteConfig["product_subtitles"] as? [String],
+              let fxProducts = fxPaywall.products else { return }
+        
+        products.removeAll()
+        for i in 0..<min(productTitleArray.count, fxProducts.count) {
+            guard let price = fxProducts[i].localizedPrice else { continue }
+            
+            let product = Product(
+                identifier: fxProducts[i].productId,
+                title: productTitleArray[i].replacingOccurrences(of: "#price#", with: price),
+                subTitle: productSubtitleArray[i].replacingOccurrences(of: "#price#", with: price),
+                price: price,
+                selected: i == 0
+            )
+            products.append(product)
+        }
+    }
+    
+    private func updateButtonColor(from remoteConfig: [String: Any]) {
+        if let buttonColor = remoteConfig["purchase_button_color_dark"] as? String {
+            startFreeTrialButton.backgroundColor = UIColor(hexString: buttonColor)
+        }
+    }
+    
     
     //MARK: - Functions
     
@@ -283,7 +209,6 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         view.addSubview(tableView)
         view.addSubview(collectionView)
         view.addSubview(startFreeTrialButton)
-        view.addSubview(collectionView)
         view.addSubview(closeButton)
         view.addSubview(restoreLabel)
         view.addSubview(lineView2)
@@ -364,18 +289,8 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         present(navigationController, animated: true)
     }
     
-    func close() {
-        dismiss(animated: true, completion: nil)
-    }
     
     
-    private func setupPurchaseCompletion() {
-    }
-    
-    private func startClaimOfferPurchase() {
-        guard let _ = products.first(where: { $0.selected }),
-              let _ = fxPaywall else { return }
-    }
     
     // MARK: - OBJC Functions
     
@@ -410,80 +325,49 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     }
     
     private func handlePurchaseSuccess() {
+        guard let window = view.window else { return }
+        
         dismiss(animated: true) {
-            PaywallManager.shared.navigateToMainApp(from: self)
+            let mainTabBarController = MainTabBarController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = mainTabBarController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
         }
     }
     
     private func handlePurchaseFailure(error: Error) {
-        print("Paywall1ViewController: handlePurchaseFailure called")
-        print("Paywall1ViewController: fxPaywall exists: \(fxPaywall != nil)")
-        
-        guard let paywall = fxPaywall else {
-            print("Paywall1ViewController: No fxPaywall available")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
+        guard let paywall = fxPaywall,
+              let remoteConfig = paywall.remoteConfig,
+              let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool else {
+            showPurchaseFailedAlert()
             return
         }
         
-        print("Paywall1ViewController: remoteConfig exists: \(paywall.remoteConfig != nil)")
-        
-        guard let remoteConfig = paywall.remoteConfig else {
-            print("Paywall1ViewController: No remoteConfig available")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
+        if displayOnClosePaywallFailure && !isOnClosePaywall {
+            showOnClosePaywallAfterFailure()
+        } else {
+            showPurchaseFailedAlert()
         }
-        
-        print("Paywall1ViewController: remoteConfig: \(remoteConfig)")
-        
-        guard let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool else {
-            print("Paywall1ViewController: display_onClose_paywall_failure not found or not Bool")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
-        }
-        
-        print("Paywall1ViewController: display_onClose_paywall_failure: \(displayOnClosePaywallFailure)")
-        
-        guard displayOnClosePaywallFailure == true else {
-            print("Paywall1ViewController: display_onClose_paywall_failure is false, showing alert")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
-        }
-        
-        if isOnClosePaywall {
-            print("Paywall1ViewController: Already onclose paywall, showing alert instead of opening another onclose")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
-        }
-        
-        print("Paywall1ViewController: display_onClose_paywall_failure is true, dismissing and showing onclose paywall")
+    }
+    
+    private func showPurchaseFailedAlert() {
+        let alert = UIAlertController(
+            title: "Purchase Failed",
+            message: "Unable to complete purchase. Please try again.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func showOnClosePaywallAfterFailure() {
         let presentingVC = presentingViewController
         dismiss(animated: true) {
-            print("Paywall1ViewController: Dismiss completed, showing onclose paywall")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if let presentingVC = presentingVC {
                     PaywallManager.shared.showPaywall(placement: .onclose, from: presentingVC)
-                } else {
-                    print("Paywall1ViewController: No presenting view controller found")
                 }
             }
         }
@@ -496,7 +380,24 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
             showOnClosePaywall()
         } else {
             print("Paywall1ViewController: Normal dismiss")
-            dismiss(animated: true, completion: nil)
+            if placementId == "onboarding" {
+                navigateToMainPage()
+            } else {
+                dismiss(animated: true, completion: nil)
+            }
+        }
+    }
+    
+    private func navigateToMainPage() {
+        guard let window = view.window else { return }
+        
+        dismiss(animated: true) {
+            let mainTabBarController = MainTabBarController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = mainTabBarController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
         }
     }
     

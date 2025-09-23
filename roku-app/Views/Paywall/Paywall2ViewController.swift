@@ -14,13 +14,7 @@ class Paywall2ViewController: UIViewController {
     
     //MARK: - Properties
     
-    var features: [PaywallFeature] = []
-    var weeklyProduct: FXProduct?
-    var configArray: [(key: String, value: Any)] = []
     var fxPaywall: FXPaywall?
-    var displayClaimOfferAlert: Bool?
-    var displayOncloseModal: Bool?
-    var displayOnclosePaywallFailure: Bool?
     var placementId: String
     var isOnClosePaywall: Bool = false
     
@@ -62,8 +56,6 @@ class Paywall2ViewController: UIViewController {
         super.init(coder: coder)
     }
     
-    var closeCompletion: (() -> Void)?
-    var onDismiss: (() -> Void)?
     
     //MARK: - UI Elements
     
@@ -258,12 +250,6 @@ class Paywall2ViewController: UIViewController {
         print("setDefaultValues called - final description: \(descriptionLabel.text ?? "")")
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-    }
     
     //MARK: - Functions
     private func setupViews() {
@@ -399,81 +385,49 @@ class Paywall2ViewController: UIViewController {
     }
     
     private func handlePurchaseSuccess() {
+        guard let window = view.window else { return }
+        
         dismiss(animated: true) {
-            PaywallManager.shared.navigateToMainApp(from: self)
+            let mainTabBarController = MainTabBarController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = mainTabBarController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
         }
     }
     
     private func handlePurchaseFailure(error: Error) {
-        print("Paywall2ViewController: handlePurchaseFailure called")
-        print("Paywall2ViewController: fxPaywall exists: \(fxPaywall != nil)")
-        print("Paywall2ViewController: isOnClosePaywall: \(isOnClosePaywall)")
-        
-        guard let paywall = fxPaywall else {
-            print("Paywall2ViewController: No fxPaywall available")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
+        guard let paywall = fxPaywall,
+              let remoteConfig = paywall.remoteConfig,
+              let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool else {
+            showPurchaseFailedAlert()
             return
         }
         
-        print("Paywall2ViewController: remoteConfig exists: \(paywall.remoteConfig != nil)")
-        
-        guard let remoteConfig = paywall.remoteConfig else {
-            print("Paywall2ViewController: No remoteConfig available")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
+        if displayOnClosePaywallFailure && !isOnClosePaywall {
+            showOnClosePaywallAfterFailure()
+        } else {
+            showPurchaseFailedAlert()
         }
-        
-        print("Paywall2ViewController: remoteConfig: \(remoteConfig)")
-        
-        guard let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool else {
-            print("Paywall2ViewController: display_onClose_paywall_failure not found or not Bool")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
-        }
-        
-        print("Paywall2ViewController: display_onClose_paywall_failure: \(displayOnClosePaywallFailure)")
-        
-        guard displayOnClosePaywallFailure == true else {
-            print("Paywall2ViewController: display_onClose_paywall_failure is false, showing alert")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
-        }
-        
-        if isOnClosePaywall {
-            print("Paywall2ViewController: Already onclose paywall, showing alert instead of opening another onclose")
-            let alert = UIAlertController(title: "Purchase Failed", 
-                                        message: "Unable to complete purchase. Please try again.", 
-                                        preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            return
-        }
-        
-        print("Paywall2ViewController: display_onClose_paywall_failure is true, dismissing and showing onclose paywall")
+    }
+    
+    private func showPurchaseFailedAlert() {
+        let alert = UIAlertController(
+            title: "Purchase Failed",
+            message: "Unable to complete purchase. Please try again.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func showOnClosePaywallAfterFailure() {
         let presentingVC = presentingViewController
         dismiss(animated: true) {
-            print("Paywall2ViewController: Dismiss completed, showing onclose paywall")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if let presentingVC = presentingVC {
                     PaywallManager.shared.showPaywall(placement: .onclose, from: presentingVC)
-                } else {
-                    print("Paywall2ViewController: No presenting view controller found")
                 }
             }
         }
@@ -486,7 +440,24 @@ class Paywall2ViewController: UIViewController {
             showOnClosePaywall()
         } else {
             print("Paywall2ViewController: Normal dismiss")
-            dismiss(animated: true, completion: nil)
+            if placementId == "onboarding" {
+                navigateToMainPage()
+            } else {
+                dismiss(animated: true, completion: nil)
+            }
+        }
+    }
+    
+    private func navigateToMainPage() {
+        guard let window = view.window else { return }
+        
+        dismiss(animated: true) {
+            let mainTabBarController = MainTabBarController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = mainTabBarController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
         }
     }
     
@@ -524,10 +495,6 @@ class Paywall2ViewController: UIViewController {
         }
     }
     
-    private func startClaimOfferPurchase() {
-        guard let _ = weeklyProduct,
-              let _ = fxPaywall else { return }
-    }
     
     
     @objc func termOfUseLabelTapped() {

@@ -61,6 +61,7 @@ class Paywall3ViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(restoreLabelTapped), name: NSNotification.Name("restore"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(showAlert), name: NSNotification.Name("ShowAlert"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(showOnClosePaywall), name: NSNotification.Name("ShowOnClosePaywall"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handlePurchaseCompleted), name: NSNotification.Name("PurchaseCompleted"), object: nil)
     }
     
     private func loadPaywallData() {
@@ -164,7 +165,7 @@ class Paywall3ViewController: UIViewController {
         paywall3ModalView.loadingActivityIndicatorView.isHidden = true
         paywall3ModalView.loadingActivityIndicatorView.stopAnimating()
         
-        dismiss(animated: true, completion: nil)
+        navigateToMainPage()
     }
     
     @objc func showAlert(_ notification: Notification) {
@@ -176,6 +177,32 @@ class Paywall3ViewController: UIViewController {
         dismiss(animated: true) { [weak self] in
             guard let self = self else { return }
             PaywallManager.shared.showPaywall(placement: .onclose, from: self)
+        }
+    }
+    
+    @objc func handlePurchaseCompleted() {
+        guard let window = view.window else { return }
+        
+        dismiss(animated: true) {
+            let mainTabBarController = MainTabBarController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = mainTabBarController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
+        }
+    }
+    
+    private func navigateToMainPage() {
+        guard let window = view.window else { return }
+        
+        dismiss(animated: true) {
+            let mainTabBarController = MainTabBarController()
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = mainTabBarController
+            }) { _ in
+                window.makeKeyAndVisible()
+            }
         }
     }
     

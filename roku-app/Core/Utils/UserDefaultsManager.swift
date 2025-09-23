@@ -11,6 +11,8 @@ class UserDefaultsManager {
     static let shared = UserDefaultsManager()
     
     private let hasCompletedOnboardingKey = "hasCompletedOnboarding"
+    private let hasSeenOnboardingPaywallKey = "hasSeenOnboardingPaywall"
+    private let shouldSkipNextMainPaywallKey = "shouldSkipNextMainPaywall"
     
     private init() {}
     
@@ -23,11 +25,40 @@ class UserDefaultsManager {
         }
     }
     
+    var hasSeenOnboardingPaywall: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: hasSeenOnboardingPaywallKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: hasSeenOnboardingPaywallKey)
+        }
+    }
+    
+    var shouldSkipNextMainPaywall: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: shouldSkipNextMainPaywallKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: shouldSkipNextMainPaywallKey)
+        }
+    }
+    
     func markOnboardingCompleted() {
         hasCompletedOnboarding = true
     }
     
+    func markOnboardingPaywallSeen() {
+        hasSeenOnboardingPaywall = true
+        shouldSkipNextMainPaywall = true
+    }
+    
+    func markMainPaywallShown() {
+        shouldSkipNextMainPaywall = false
+    }
+    
     func resetOnboarding() {
         hasCompletedOnboarding = false
+        hasSeenOnboardingPaywall = false
+        shouldSkipNextMainPaywall = false
     }
 }

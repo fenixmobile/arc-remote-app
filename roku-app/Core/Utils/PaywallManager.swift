@@ -36,6 +36,12 @@ class PaywallManager {
         print("PaywallManager: showDynamicPaywall called with placementId: \(placementId)")
         print("PaywallManager: From viewController: \(type(of: viewController))")
         
+        if placementId == "main" {
+            UserDefaultsManager.shared.markMainPaywallShown()
+        } else if placementId == "onclose" {
+            UserDefaultsManager.shared.markOnboardingPaywallSeen()
+        }
+        
         PaywallHelper.shared.loadPaywall(placementId: placementId) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {

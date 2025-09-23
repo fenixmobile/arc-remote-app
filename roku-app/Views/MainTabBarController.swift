@@ -60,6 +60,10 @@ class MainTabBarController: UITabBarController {
     
     private func checkAndShowMainPaywall() {
         guard UserDefaultsManager.shared.hasCompletedOnboarding else { return }
+        guard !UserDefaultsManager.shared.shouldSkipNextMainPaywall else { 
+            UserDefaultsManager.shared.markMainPaywallShown()
+            return 
+        }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             PaywallManager.shared.showDynamicPaywall(placementId: "main", from: self)
