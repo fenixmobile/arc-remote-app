@@ -36,7 +36,18 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
         textField.layer.cornerRadius = 8
         textField.layer.borderWidth = 1
         textField.layer.borderColor = UIColor.systemGray4.cgColor
+        
+        let textFieldTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTextFieldTap))
+        textFieldTapGesture.cancelsTouchesInView = false
+        textField.addGestureRecognizer(textFieldTapGesture)
+        
         return textField
+    }()
+    
+    lazy var tapGestureRecognizer: UITapGestureRecognizer = {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture))
+        tapGesture.cancelsTouchesInView = false
+        return tapGesture
     }()
     
     lazy var cast: UIButton = {
@@ -109,6 +120,8 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
         view.addSubview(status)
         view.addSubview(remoteButtonsView)
         view.addSubview(keyboardTextField)
+        
+        view.addGestureRecognizer(tapGestureRecognizer)
         
         setupDefaultUI()
     }
@@ -208,6 +221,16 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     
     @objc private func handleKeyboardButtonPressed() {
         showKeyboard()
+    }
+    
+    @objc private func handleTapGesture(_ gesture: UITapGestureRecognizer) {
+        if !keyboardTextField.isHidden {
+            hideKeyboard()
+        }
+    }
+    
+    @objc private func handleTextFieldTap(_ gesture: UITapGestureRecognizer) {
+        keyboardTextField.becomeFirstResponder()
     }
     
     private func setTvServiceStateListener() {

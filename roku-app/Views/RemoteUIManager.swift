@@ -427,6 +427,12 @@ class RemoteUIManager {
         imageView.isHidden = true
         imageView.isUserInteractionEnabled = true
         imageView.clipsToBounds = true
+        
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleTouchpadPan(_:)))
+        panGesture.minimumNumberOfTouches = 1
+        panGesture.maximumNumberOfTouches = 1
+        imageView.addGestureRecognizer(panGesture)
+        
         return imageView
     }()
     
@@ -1777,6 +1783,59 @@ class RemoteUIManager {
            case .primeVideo: return "primeVideo"
            case .alexa: return "alexa"
            case .caption: return "caption"
+        }
+    }
+    
+    @objc private func handleTouchpadPan(_ gesture: UIPanGestureRecognizer) {
+        guard let device = TVServiceManager.shared.currentDevice else {
+            print("❌ Touchpad: currentDevice nil")
+            return
+        }
+        
+        let translation = gesture.translation(in: gesture.view)
+        let velocity = gesture.velocity(in: gesture.view)
+        
+        switch gesture.state {
+        case .ended, .cancelled:
+            let threshold: CGFloat = 30.0
+            let minVelocity: CGFloat = 200.0
+            
+            if abs(velocity.x) > minVelocity || abs(translation.x) > threshold {
+                if abs(velocity.x) > abs(velocity.y) {
+                    if velocity.x > 0 {
+                        sendTouchpadCommand("right", to: device)
+                    } else {
+                        sendTouchpadCommand("left", to: device)
+                    }
+                }
+            }
+            
+            if abs(velocity.y) > minVelocity || abs(translation.y) > threshold {
+                if abs(velocity.y) > abs(velocity.x) {
+                    if velocity.y > 0 {
+                        sendTouchpadCommand("down", to: device)
+                    } else {
+                        sendTouchpadCommand("up", to: device)
+                    }
+                }
+            }
+            
+        default:
+            break
+        }
+    }
+    
+    private func sendTouchpadCommand(_ direction: String, to device: TVDevice) {
+        print("🎯 Touchpad hareketi: \(direction) - \(device.displayName)")
+        
+        Task {
+            do {
+                let command = TVRemoteCommand(command: direction)
+                try await TVServiceManager.shared.sendCommand(command, to: device)
+                print("✅ Touchpad komut başarılı: \(direction)")
+            } catch {
+                print("❌ Touchpad komut hatası: \(error.localizedDescription)")
+            }
         }
     }
 }
