@@ -1,9 +1,3 @@
-//
-//  FireTVService.swift
-//  roku-app
-//
-//  Created by Ali İhsan Çağlayan on 8.09.2025.
-//
 
 import Foundation
 import UIKit
@@ -27,49 +21,35 @@ class FireTVService: BaseTVService, URLSessionDelegate {
     }
     
     override func connect() async throws {
-        print("🔍 FireTV bağlantı başlatılıyor: \(device.ipAddress)")
         await logConnectionAttempt()
         
         do {
-            print("📡 FireTV HTTP bağlantı testi yapılıyor...")
             
             try await requestOpener()
             
-            // Önce stored token'ı kontrol et
             let deviceIdentifier = device.ipAddress
-            print("🔍 Debug - Device Identifier: \(deviceIdentifier)")
             if let storedToken = getStoredToken(for: deviceIdentifier) {
                 fireTVToken = storedToken
-                print("🔑 Stored token bulundu, bağlantı testi yapılıyor...")
-                print("🔍 Debug - Stored token: \(storedToken)")
                 
-                // Token ile bağlantı testi yap
                 do {
                     let isValid = try await testTokenWithConnection()
                     if isValid {
-                        print("✅ FireTV stored token ile bağlantı başarılı")
                         isConnected = true
                         delegate?.tvService(self, didConnect: device)
                         await logConnectionSuccess()
                         return
                     } else {
-                        print("⚠️ Stored token geçersiz, PIN doğrulama gerekiyor")
                         removeToken(for: deviceIdentifier)
                     }
                 } catch {
-                    print("❌ Token bağlantı testi başarısız: \(error)")
                     removeToken(for: deviceIdentifier)
                 }
             } else {
-                print("🔍 Debug - Stored token bulunamadı, PIN doğrulama gerekiyor")
             }
             
-            // Token yoksa veya geçersizse PIN doğrulama yap
-            print("🔐 FireTV PIN doğrulama gerekiyor")
             try await requestPINVerification()
             
         } catch {
-            print("❌ FireTV bağlantı hatası: \(error)")
             isConnected = false
             delegate?.tvService(self, didReceiveError: error)
             throw error
@@ -83,29 +63,22 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             throw TVServiceError.commandFailed("Command failed")
         }
         
-        // Power off komutu için özel işlem
         if command.command.lowercased() == "poweroff" || command.command.lowercased() == "power" {
-            print("🔌 FireTV power off komutu - önce cihazı kapatıyor...")
             
             let fireTVCommand = mapToFireTVCommand(command.command)
-            print("🎮 FireTV komut gönderiliyor: \(command.command) -> \(fireTVCommand)")
             
             let startTime = Date()
             
             do {
                 _ = try await executeFireTVCommand(fireTVCommand)
                 let responseTime = Date().timeIntervalSince(startTime)
-                print("✅ FireTV power off komutu başarılı (\(String(format: "%.2f", responseTime))s)")
                 
-                // Cihaz kapatıldıktan sonra disconnect yap
-                print("🔌 FireTV cihazı kapatıldı, disconnect yapılıyor...")
                 isConnected = false
                 delegate?.tvService(self, didDisconnect: device)
                 
                 await logCommandSent(command: command.command, success: true, responseTime: responseTime)
             } catch {
                 let responseTime = Date().timeIntervalSince(startTime)
-                print("❌ FireTV power off komutu başarısız: \(error)")
                 await logCommandSent(command: command.command, success: false, responseTime: responseTime, error: error)
                 throw error
             }
@@ -114,7 +87,6 @@ class FireTVService: BaseTVService, URLSessionDelegate {
         
         let fireTVCommand = mapToFireTVCommand(command.command)
         
-        print("🎮 FireTV komut gönderiliyor: \(command.command) -> \(fireTVCommand)")
         
         let startTime = Date()
         
@@ -122,11 +94,9 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             _ = try await executeFireTVCommand(fireTVCommand, withText: command.command == "Keyboard" ? command.parameters?["text"] as? String : nil)
             let responseTime = Date().timeIntervalSince(startTime)
             
-            print("✅ FireTV komut başarılı: \(command.command)")
             await logCommandSent(command: command.command, success: true, responseTime: responseTime)
         } catch {
             let responseTime = Date().timeIntervalSince(startTime)
-            print("❌ FireTV komut hatası: \(command.command) - \(error)")
             await logCommandSent(command: command.command, success: false, responseTime: responseTime, error: error)
             throw error
         }
@@ -155,7 +125,6 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             throw TVServiceError.connectionFailed("Invalid URL")
         }
         
-        print("📡 FireTV opener request: \(url)")
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -165,7 +134,6 @@ class FireTVService: BaseTVService, URLSessionDelegate {
         let (_, response) = try await urlSession.data(for: request)
         
         if let httpResponse = response as? HTTPURLResponse {
-            print("📊 FireTV opener response: \(httpResponse.statusCode)")
             if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
                 throw TVServiceError.connectionFailed("Opener request failed with status: \(httpResponse.statusCode)")
             }
@@ -179,7 +147,6 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             throw TVServiceError.connectionFailed("Invalid PIN URL")
         }
         
-        print("🔐 FireTV PIN request: \(url)")
         
         let pinRequest = FireTVPinDisplayRequestDTO(friendlyName: appName)
         let jsonData = try JSONEncoder().encode(pinRequest)
@@ -193,17 +160,14 @@ class FireTVService: BaseTVService, URLSessionDelegate {
         let (data, response) = try await urlSession.data(for: request)
         
         if let httpResponse = response as? HTTPURLResponse {
-            print("📊 FireTV PIN response: \(httpResponse.statusCode)")
             if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
                 throw TVServiceError.connectionFailed("PIN request failed with status: \(httpResponse.statusCode)")
             }
         }
         
         let pinResponse = try JSONDecoder().decode(FireTVResponseDTO.self, from: data)
-        print("📄 FireTV PIN response: \(pinResponse.description)")
         
         if pinResponse.description.lowercased() == "ok" {
-            print("🔐 PIN kodu FireTV ekranında görünüyor")
             
             let pin = await withCheckedContinuation { continuation in
                 Task { @MainActor in
@@ -211,15 +175,12 @@ class FireTVService: BaseTVService, URLSessionDelegate {
                 }
             }
             
-            // PIN boş kontrolü
             if pin.isEmpty {
                 throw TVServiceError.connectionFailed("PIN kodu boş")
             }
             
-            // PIN doğrulama yap
             let isValid = try await verifyPIN(pin)
             if isValid {
-                print("✅ FireTV PIN doğrulama başarılı, bağlantı kuruldu")
                 isConnected = true
                 delegate?.tvService(self, didConnect: device)
                 await logConnectionSuccess()
@@ -236,7 +197,6 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             throw TVServiceError.connectionFailed("Invalid PIN verify URL")
         }
         
-        print("🔐 FireTV PIN verify: \(url)")
         
         let pinVerify = FireTVPinVerifyRequestDTO(pin: pin)
         let jsonData = try JSONEncoder().encode(pinVerify)
@@ -250,28 +210,23 @@ class FireTVService: BaseTVService, URLSessionDelegate {
         let (data, response) = try await urlSession.data(for: request)
         
         if let httpResponse = response as? HTTPURLResponse {
-            print("📊 FireTV PIN verify response: \(httpResponse.statusCode)")
             if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
                 return false
             }
         }
         
         let verifyResponse = try JSONDecoder().decode(FireTVResponseDTO.self, from: data)
-        print("📄 FireTV PIN verify response: \(verifyResponse.description)")
         
         if !verifyResponse.description.isEmpty {
             fireTVToken = verifyResponse.description
             saveToken(verifyResponse.description, for: device.ipAddress)
-            print("✅ FireTV PIN doğrulama başarılı, token kaydedildi: \(verifyResponse.description)")
             return true
         } else {
-            print("❌ FireTV PIN doğrulama başarısız")
             return false
         }
     }
     
     override func disconnect() {
-        print("🔌 FireTV bağlantısı kesiliyor: \(device.ipAddress)")
         isConnected = false
         fireTVToken = nil
         delegate?.tvService(self, didDisconnect: device)
@@ -286,7 +241,6 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             throw TVServiceError.commandFailed("Invalid command URL")
         }
         
-        print("📡 FireTV HTTP komut gönderiliyor: \(command) on port 8080")
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -298,23 +252,19 @@ class FireTVService: BaseTVService, URLSessionDelegate {
             let voiceCommand = FireTVVoiceCommandRequestDTO(action: "Start")
             let jsonData = try JSONEncoder().encode(voiceCommand)
             request.httpBody = jsonData
-            print("🎤 Alexa voice command parametresi gönderiliyor: Start")
         } else if command.contains("text") {
             let textToSend = text ?? "text"
             let textCommand = FireTVTextRequestDTO(text: textToSend)
             let jsonData = try JSONEncoder().encode(textCommand)
             request.httpBody = jsonData
-            print("⌨️ Keyboard text parametresi gönderiliyor: \(textToSend)")
         }
         
         let (data, response) = try await urlSession.data(for: request)
         
         if let httpResponse = response as? HTTPURLResponse {
-            print("📊 FireTV HTTP Status: \(httpResponse.statusCode)")
             
             if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
                 let responseString = String(data: data, encoding: .utf8) ?? ""
-                print("📄 FireTV HTTP response: \(responseString)")
                 return responseString
             } else {
                 throw TVServiceError.commandFailed("HTTP command failed with status: \(httpResponse.statusCode)")
@@ -461,20 +411,16 @@ extension FireTVService {
 
 extension FireTVService {
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        print("🔐 SSL Challenge received for: \(challenge.protectionSpace.host)")
         
         if challenge.protectionSpace.serverTrust == nil {
-            print("⚠️ No server trust available")
             completionHandler(.useCredential, nil)
         } else {
             let trust = challenge.protectionSpace.serverTrust!
             let credential = URLCredential(trust: trust)
-            print("✅ Accepting self-signed certificate for FireTV")
             completionHandler(.useCredential, credential)
         }
     }
     
-    // MARK: - Token Management
     
     private func saveToken(_ token: String, for deviceId: String) {
         var tokens = getStoredTokens()
@@ -482,23 +428,16 @@ extension FireTVService {
         
         UserDefaults.standard.set(tokens, forKey: tokenStorageKey)
         
-        print("💾 FireTV token kaydedildi: \(deviceId)")
-        print("🔍 Debug - Kaydedilen token: \(token)")
     }
     
     private func getStoredToken(for deviceId: String) -> String? {
         let tokens = getStoredTokens()
         
-        print("🔍 Debug - Aranan deviceId: \(deviceId)")
-        print("🔍 Debug - Mevcut tokens: \(tokens.keys)")
         
         guard let token = tokens[deviceId] else {
-            print("🔍 FireTV token bulunamadı: \(deviceId)")
             return nil
         }
         
-        print("✅ FireTV token bulundu: \(deviceId)")
-        print("🔍 Debug - Bulunan token: \(token)")
         return token
     }
     
@@ -509,7 +448,6 @@ extension FireTVService {
         
         UserDefaults.standard.set(tokens, forKey: tokenStorageKey)
         
-        print("🗑️ FireTV token silindi: \(deviceId)")
     }
     
     private func getStoredTokens() -> [String: String] {
@@ -518,12 +456,9 @@ extension FireTVService {
     
     private func testTokenWithConnection() async throws -> Bool {
         guard let token = fireTVToken else {
-            print("❌ Token bağlantı testi: Token bulunamadı")
             throw TVServiceError.connectionFailed("No token available")
         }
         
-        print("🧪 FireTV token bağlantı testi yapılıyor...")
-        print("🔍 Debug - Test edilen token: \(token)")
         
         guard let url = URL(string: "https://\(device.ipAddress):8080/v1/FireTV?action=home") else {
             throw TVServiceError.connectionFailed("Invalid test URL")
@@ -539,11 +474,9 @@ extension FireTVService {
         
         if let httpResponse = response as? HTTPURLResponse {
             let isValid = httpResponse.statusCode == 200 || httpResponse.statusCode == 201
-            print("📊 FireTV token bağlantı testi sonucu: \(httpResponse.statusCode) - Geçerli: \(isValid)")
             return isValid
         }
         
-        print("❌ Token bağlantı testi: HTTP response alınamadı")
         return false
     }
 }
