@@ -154,6 +154,7 @@ struct CombinedRemoteButton {
 class RemoteUIManager {
     
     private var isOn = false
+    private var isMuted = false
     private let offImageName = "touchpad.off1"
     private let onImageName = "touchpad.on1"
     
@@ -1731,9 +1732,11 @@ class RemoteUIManager {
         if isOn {
             toggle.setImage(UIImage(named: onImageName), for: .normal)
             touchPadImageView.isHidden = false
+            AnalyticsManager.shared.fxAnalytics.send(event: "main_control_toggle_touchpad")
         } else {
             toggle.setImage(UIImage(named: offImageName), for: .normal)
             touchPadImageView.isHidden = true
+            AnalyticsManager.shared.fxAnalytics.send(event: "main_control_toggle_buttons")
         }
     }
     
@@ -1747,6 +1750,9 @@ class RemoteUIManager {
         
         if let event: TVRemoteEvent = .init(rawValue: sender.tag) {
             let commandString = getCommandString(for: event)
+            
+            sendAnalyticsEvent(for: sender.tag)
+            
             Task {
                 do {
                     try await TVServiceManager.shared.sendCommand(TVRemoteCommand(command: commandString), to: device)
@@ -1760,6 +1766,43 @@ class RemoteUIManager {
             NotificationCenter.default.post(name: NSNotification.Name("PowerButtonPressed"), object: nil)
         } else if sender.tag == Buttons.keyboard.rawValue {
             NotificationCenter.default.post(name: NSNotification.Name("KeyboardButtonPressed"), object: nil)
+        }
+    }
+    
+    private func sendAnalyticsEvent(for buttonTag: Int) {
+        if buttonTag == Buttons.mute.rawValue {
+            let eventName = isMuted ? "main_unmute_tap" : "main_mute_tap"
+            AnalyticsManager.shared.fxAnalytics.send(event: eventName)
+            isMuted.toggle()
+            return
+        }
+        
+        let analyticsEvents: [Int: String] = [
+            Buttons.power.rawValue: "main_power_tap",
+            Buttons.keyboard.rawValue: "main_keyboard_tap",
+            Buttons.home.rawValue: "main_home_tap",
+            Buttons.back.rawValue: "main_back_tap",
+            Buttons.playpause.rawValue: "main_pause_tap",
+            Buttons.rev.rawValue: "main_previous_tap",
+            Buttons.fwd.rawValue: "main_next_tap",
+            Buttons.up.rawValue: "main_control_up_tap",
+            Buttons.down.rawValue: "main_control_down_tap",
+            Buttons.left.rawValue: "main_control_left_tap",
+            Buttons.right.rawValue: "main_control_right_tap",
+            Buttons.ok.rawValue: "main_control_ok_tap",
+            Buttons.options.rawValue: "main_settings_tap",
+            Buttons.alexa.rawValue: "main_alexa_tap",
+            Buttons.channelUp.rawValue: "main_channel_up",
+            Buttons.channeldown.rawValue: "main_channel_down",
+            Buttons.source.rawValue: "main_source_tap",
+            Buttons.smartHub.rawValue: "main_smart_hub_tap",
+            Buttons.colorsShortcut.rawValue: "main_colors_tap",
+            Buttons.increase.rawValue: "main_volume_up",
+            Buttons.decrease.rawValue: "main_volume_down"
+        ]
+        
+        if let eventName = analyticsEvents[buttonTag] {
+            AnalyticsManager.shared.fxAnalytics.send(event: eventName)
         }
     }
     
@@ -1787,13 +1830,13 @@ class RemoteUIManager {
         case .mute: return "mute"
         case .source: return "source"
         case .smartHub: return "smartHub"
-           case .colorsShortcut: return "colorsShortcut"
-           case .channelUp: return "channelUp"
-           case .channeldown: return "channelDown"
-           case .amazonMusic: return "amazonMusic"
-           case .primeVideo: return "primeVideo"
-           case .alexa: return "alexa"
-           case .caption: return "caption"
+        case .colorsShortcut: return "colorsShortcut"
+        case .channelUp: return "channelUp"
+        case .channeldown: return "channelDown"
+        case .amazonMusic: return "amazonMusic"
+        case .primeVideo: return "primeVideo"
+        case .alexa: return "alexa"
+        case .caption: return "caption"
         }
     }
     

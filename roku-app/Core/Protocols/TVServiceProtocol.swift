@@ -23,5 +23,6 @@ protocol TVServiceDelegate: AnyObject {
     func tvService(_ service: TVServiceProtocol, didDisconnect device: TVDevice)
     func tvService(_ service: TVServiceProtocol, didReceiveError error: Error)
     func tvService(_ service: TVServiceProtocol, didDiscoverDevices devices: [TVDevice])
+    func tvService(_ service: TVServiceProtocol, didDiscoverDevicesIncremental devices: [TVDevice])
     func tvService(_ service: TVServiceProtocol, didRequestPin device: TVDevice)
 }

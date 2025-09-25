@@ -107,6 +107,7 @@ class SettingsViewController: UIViewController {
     }
     
     private func shareAppAction() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "settings_appShare")
         let firstActivityItem = "\(Constants.App.name) - \(Constants.App.description)"
         guard let secondActivityItem: NSURL = NSURL(string: Constants.URLs.shareApp) else { return }
         let image: UIImage = UIImage(named: "AppIcon") ?? UIImage()
@@ -119,12 +120,14 @@ class SettingsViewController: UIViewController {
     }
     
     private func restorePurchases() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "settings_restore_purchase")
         let alert = UIAlertController(title: "Restore Purchases", message: "This feature will restore your previous purchases", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
     
     private func rateApp() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "settings_rate")
         if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
             if #available(iOS 14.0, *) {
                 openURL(Constants.URLs.appStoreReview, title: "Rate Us")
@@ -133,14 +136,17 @@ class SettingsViewController: UIViewController {
     }
     
     private func supportTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "settings_contact")
         openURL(Constants.URLs.support, title: "Contact Us")
     }
     
     private func privacyPolicyTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "settings_privacy")
         openURL(Constants.URLs.privacyPolicy, title: "Privacy Policy")
     }
     
     private func termOfUseTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "settings_terms")
         openURL(Constants.URLs.termsOfUse, title: "Terms of Use")
     }
     
@@ -233,6 +239,7 @@ extension SettingsViewController: UITableViewDelegate {
     }
     
     private func openPaywall() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "settings_pro_tap")
         PaywallManager.shared.showPaywall(placement: .settings, from: self)
     }
 }

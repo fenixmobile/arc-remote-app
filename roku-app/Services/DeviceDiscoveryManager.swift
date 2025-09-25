@@ -11,6 +11,7 @@ import XMLCoder
 
 protocol DeviceDiscoveryDelegate: AnyObject {
     func didDiscoverDevice(_ device: TVDevice)
+    func didDiscoverDevicesIncremental(_ devices: [TVDevice])
     func didFinishDiscovery()
     func didUpdateDiscoveryMessage(_ message: String)
 }
@@ -20,6 +21,8 @@ class DeviceDiscoveryManager {
     
     private var ssdpClients: [SSDPDiscovery] = []
     private let queue = DispatchQueue(label: "DeviceDiscovery")
+    private var incrementalDevices: [TVDevice] = []
+    private var isIncrementalDiscovery = false
     
     func startDiscovery() {
         delegate?.didUpdateDiscoveryMessage("Cihazlar aranıyor...")
@@ -31,9 +34,33 @@ class DeviceDiscoveryManager {
         }
     }
     
+    func startIncrementalDiscovery() {
+        isIncrementalDiscovery = true
+        incrementalDevices.removeAll()
+        delegate?.didUpdateDiscoveryMessage("Cihazlar güncelleniyor...")
+        
+        startSSDPDiscovery()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            self?.stopIncrementalDiscovery()
+        }
+    }
+    
     func stopDiscovery() {
         ssdpClients.forEach { $0.stop() }
         ssdpClients.removeAll()
+        delegate?.didFinishDiscovery()
+    }
+    
+    func stopIncrementalDiscovery() {
+        ssdpClients.forEach { $0.stop() }
+        ssdpClients.removeAll()
+        
+        if isIncrementalDiscovery {
+            delegate?.didDiscoverDevicesIncremental(incrementalDevices)
+            isIncrementalDiscovery = false
+        }
+        
         delegate?.didFinishDiscovery()
     }
     
@@ -98,7 +125,13 @@ class DeviceDiscoveryManager {
             port: port
         )
         
-        delegate?.didDiscoverDevice(device)
+        if isIncrementalDiscovery {
+            if !incrementalDevices.contains(where: { $0.ipAddress == device.ipAddress }) {
+                incrementalDevices.append(device)
+            }
+        } else {
+            delegate?.didDiscoverDevice(device)
+        }
     }
     
     private func determineBrand(from manufacturer: String, modelName: String) -> TVBrand {

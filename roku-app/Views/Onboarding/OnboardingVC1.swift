@@ -149,6 +149,7 @@ class OnboardingVC1: UIViewController {
     }
     
     @objc func continueButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "onboarding_welcome_next_tap")
         completeOnboarding()
         if let parentViewController = parent as? PageViewController {
             parentViewController.showNextPage()

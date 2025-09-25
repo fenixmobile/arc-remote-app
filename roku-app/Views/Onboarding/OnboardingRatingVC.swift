@@ -186,6 +186,7 @@ class OnboardingRatingVC: UIViewController {
     }
     
     @objc func continueButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "rate_continue")
         if !rateAppShowed {
             rateAppShowed = true
             rateApp()

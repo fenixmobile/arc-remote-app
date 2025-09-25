@@ -59,6 +59,10 @@ class BaseTVService: NSObject, TVServiceProtocol {
         delegate?.tvService(self, didRequestPin: device)
     }
     
+    func didDiscoverDevicesIncremental(_ devices: [TVDevice]) {
+        delegate?.tvService(self, didDiscoverDevicesIncremental: devices)
+    }
+    
     
     func makeRequest(to url: URL, method: String = "POST", body: Data? = nil) async throws -> Data {
         var request = URLRequest(url: url)

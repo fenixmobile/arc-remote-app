@@ -158,6 +158,8 @@ class Paywall3ViewController: UIViewController {
     }
     
     @objc func restoreLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_restore")
+
         paywall3ModalView.loadingActivityIndicatorView.startAnimating()
     }
     

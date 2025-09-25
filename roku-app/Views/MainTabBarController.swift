@@ -22,6 +22,7 @@ class MainTabBarController: UITabBarController {
         setupTabBarConstraints()
         setupViewControllers()
         checkAndShowMainPaywall()
+        delegate = self
     }
     
     private func setupTabBarConstraints() {
@@ -67,6 +68,16 @@ class MainTabBarController: UITabBarController {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             PaywallManager.shared.showDynamicPaywall(placementId: "main", from: self)
+        }
+    }
+}
+
+extension MainTabBarController: UITabBarControllerDelegate {
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        if viewController.tabBarItem.tag == 0 {
+            AnalyticsManager.shared.fxAnalytics.send(event: "tabbar_remote")
+        } else if viewController.tabBarItem.tag == 1 {
+            AnalyticsManager.shared.fxAnalytics.send(event: "tabbar_settings")
         }
     }
 }

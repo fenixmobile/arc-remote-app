@@ -35,6 +35,14 @@ class TVServiceManager: ObservableObject {
         
         discoveryManager.startDiscovery()
     }
+    
+    func startIncrementalDiscovery() {
+        DispatchQueue.main.async {
+            self.isDiscovering = true
+        }
+        
+        discoveryManager.startDiscovery()
+    }
 
     func stopDiscovery() {
         discoveryManager.stopDiscovery()
@@ -281,6 +289,12 @@ extension TVServiceManager: DeviceDiscoveryDelegate {
         }
     }
     
+    func didDiscoverDevicesIncremental(_ devices: [TVDevice]) {
+        DispatchQueue.main.async {
+            self.updateDiscoveredDevicesIncremental(devices)
+        }
+    }
+    
     func didFinishDiscovery() {
         DispatchQueue.main.async {
             self.isDiscovering = false
@@ -414,6 +428,40 @@ extension TVServiceManager: TVServiceDelegate {
         DispatchQueue.main.async {
             self.discoveredDevices = devices
         }
+    }
+    
+    func tvService(_ service: TVServiceProtocol, didDiscoverDevicesIncremental devices: [TVDevice]) {
+        print("🔗 TVServiceManager: tvService didDiscoverDevicesIncremental çağrıldı - \(devices.count) cihaz")
+        
+        DispatchQueue.main.async {
+            self.updateDiscoveredDevicesIncremental(devices)
+        }
+    }
+    
+    private func updateDiscoveredDevicesIncremental(_ newDevices: [TVDevice]) {
+        var updatedDevices = discoveredDevices
+        
+        for newDevice in newDevices {
+            if let existingIndex = updatedDevices.firstIndex(where: { $0.ipAddress == newDevice.ipAddress }) {
+                updatedDevices[existingIndex] = newDevice
+                print("🔄 TVServiceManager: Cihaz güncellendi - \(newDevice.displayName)")
+            } else {
+                updatedDevices.append(newDevice)
+                print("➕ TVServiceManager: Yeni cihaz eklendi - \(newDevice.displayName)")
+            }
+        }
+        
+        let currentDeviceIPs = Set(newDevices.map { $0.ipAddress })
+        updatedDevices = updatedDevices.filter { device in
+            let shouldKeep = currentDeviceIPs.contains(device.ipAddress)
+            if !shouldKeep {
+                print("➖ TVServiceManager: Cihaz kaldırıldı - \(device.displayName)")
+            }
+            return shouldKeep
+        }
+        
+        discoveredDevices = updatedDevices
+        updateDiscoveryMessage()
     }
     
     func tvService(_ service: TVServiceProtocol, didRequestPin device: TVDevice) {

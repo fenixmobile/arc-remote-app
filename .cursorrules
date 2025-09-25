@@ -65,35 +65,64 @@
 ## Project Structure
 ```
 roku-app/
+├── App/
+│   ├── AppDelegate.swift
+│   └── SceneDelegate.swift
+├── Core/
+│   ├── Models/
+│   ├── Protocols/
+│   └── Utils/
 ├── Services/
 │   ├── TVServiceManager.swift
 │   ├── BaseTVService.swift
-│   ├── RokuTVService.swift
-│   ├── SamsungTVService.swift
-│   └── [Other TV Services]
+│   ├── AndroidTVService.swift
+│   ├── AndroidTV/
+│   │   ├── PairingMessageManager.swift
+│   │   ├── RemoteMessageManager.swift
+│   │   ├── Credentials.swift
+│   │   ├── pairingmessage.pb.swift
+│   │   └── remotemessage.pb.swift
+│   ├── SessionDataManager.swift
+│   ├── RemoteDataManager.swift
+│   ├── NetworkCheck.swift
+│   └── AnalyticsManager.swift
 ├── Views/
+│   ├── SplashViewController.swift
 │   ├── DeviceDiscoveryViewController.swift
 │   ├── TVRemoteViewController.swift
-│   └── MainTabBarController.swift
+│   ├── MainTabBarController.swift
+│   ├── PageViewController.swift
+│   └── Onboarding/
+│       └── OnboardingVC1.swift
 ├── Models/
 │   ├── TVDevice.swift
-│   ├── TVBrand.swift
-│   └── TVLog.swift
-├── Protocols/
-│   └── TVServiceProtocol.swift
-├── Utils/
-│   └── LogService.swift
-└── ViewModels/
-    └── TVRemoteViewModel.swift
+│   ├── AppSession.swift
+│   ├── LoginRequestDTO.swift
+│   ├── LoginResponseDTO.swift
+│   └── PhoneDeviceInfo.swift
+└── Resources/
+    ├── Assets.xcassets/
+    ├── Colors.xcassets/
+    ├── Fonts/
+    ├── cert.p12
+    └── GoogleService-Info.plist
 ```
 
 ## Key Features
-- Multi-brand TV support (Roku, Samsung, LG, Sony, etc.)
-- Network discovery using Bonjour/mDNS and SSDP
-- Real-time remote control commands
-- Connection state management
-- Error handling and logging
-- Modern SwiftUI/UIKit hybrid approach
+- Android TV support with Protocol Buffers
+- SSL/TLS secure connections
+- PIN pairing system
+- Splash screen with login flow
+- Dynamic onboarding (first launch only)
+- Firebase integration
+- FXFramework for analytics/purchases
+- Network discovery and device management
+
+## Communication Style
+- **KEEP RESPONSES SHORT** - Be concise and to the point
+- **SHORT COMMIT MESSAGES** - Use brief, descriptive commit messages
+- Focus on essential information only
+- Avoid lengthy explanations unless specifically requested
 
 ## Remember
 - **NO COMMENTS** - Write self-documenting code

@@ -65,6 +65,11 @@ class TVRemoteViewModel: ObservableObject {
         tvServiceManager.startDiscovery()
     }
     
+    func startIncrementalDiscovery() {
+        errorMessage = nil
+        tvServiceManager.startIncrementalDiscovery()
+    }
+    
     func connectToDevice(_ device: TVDevice) {
         print("🔗 TVRemoteViewModel: connectToDevice çağrıldı - \(device.name)")
         print("🔗 TVRemoteViewModel: Device IP: \(device.ipAddress):\(device.port)")

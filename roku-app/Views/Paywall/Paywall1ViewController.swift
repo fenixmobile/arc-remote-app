@@ -295,6 +295,8 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     // MARK: - OBJC Functions
     
     @objc func startFreeTrialButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
+
         guard let selectedProduct = products.first(where: {$0.selected }),
               let fxPaywall = fxPaywall,
               let fxProduct = fxPaywall.products?.first else { return }
@@ -374,6 +376,12 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     }
     
     @objc func closeButtonTapped() {
+        if placementId == "onclose" {
+            AnalyticsManager.shared.fxAnalytics.send(event: "onclose_purchase_close")
+        } else {
+            AnalyticsManager.shared.fxAnalytics.send(event: "paywall_close")
+        }
+
         print("Paywall1ViewController: Close button tapped")
         if shouldShowOnClosePaywall() {
             print("Paywall1ViewController: Should show onclose paywall")
@@ -436,14 +444,20 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     }
     
     @objc func termOfUseLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_terms_tap")
+
         showWebViewContentPage(title: "Terms of Use", contentURL: Constants.URLs.termsOfUse)
     }
     
     @objc func privacyPolicyLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_privacy_tap")
+
         showWebViewContentPage(title: "Privacy Policy", contentURL: Constants.URLs.privacyPolicy)
     }
     
     @objc func restoreLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_restore")
+
         self.loadingActivityIndicatorView.isHidden = false
         self.loadingActivityIndicatorView.startAnimating()
         

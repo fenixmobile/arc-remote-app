@@ -349,6 +349,8 @@ class Paywall2ViewController: UIViewController {
     //MARK: - OBJC Functions
     
     @objc func continueButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
+
         guard let fxProduct = fxPaywall?.products?.first,
               let fxPaywall = fxPaywall else { 
             print("Paywall2ViewController: No product or paywall available")
@@ -434,6 +436,12 @@ class Paywall2ViewController: UIViewController {
     }
     
     @objc func closeButtonTapped() {
+        if placementId == "onclose" {
+            AnalyticsManager.shared.fxAnalytics.send(event: "onclose_purchase_close")
+        } else {
+            AnalyticsManager.shared.fxAnalytics.send(event: "paywall_close")
+        }
+
         print("Paywall2ViewController: Close button tapped")
         if shouldShowOnClosePaywall() {
             print("Paywall2ViewController: Should show onclose paywall")
@@ -498,16 +506,22 @@ class Paywall2ViewController: UIViewController {
     
     
     @objc func termOfUseLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_terms_tap")
+
         showWebViewContentPage(title: "Terms of Use",
                                contentURL: Constants.URLs.termsOfUse)
     }
     
     @objc func privacyPolicyLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_privacy_tap")
+
         showWebViewContentPage(title: "Privacy Policy",
                                contentURL: Constants.URLs.privacyPolicy)
     }
     
     @objc func restoreLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_restore")
+
         loadingActivityIndicatorView.isHidden = false
         loadingActivityIndicatorView.startAnimating()
         

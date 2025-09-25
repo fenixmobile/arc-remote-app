@@ -258,10 +258,12 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     }
     
     @objc func castButtonAction() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "main_device_list_tap")
         showDeviceList()
     }
     
     @objc func menuButtonAction() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "main_home_tap")
         if viewModel.currentDevice != nil {
             showDisconnectActionSheet()
         } else {
@@ -273,9 +275,12 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
         let actionSheet = UIAlertController(title: "Connected to \(viewModel.currentDevice?.name ?? "")", message: nil, preferredStyle: .actionSheet)
         
         let disconnectAction = UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
+            AnalyticsManager.shared.fxAnalytics.send(event: "device_disconnect")
             self?.disconnectDevice()
         }
-        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            AnalyticsManager.shared.fxAnalytics.send(event: "device_cancel")
+        }
         
         actionSheet.addAction(disconnectAction)
         actionSheet.addAction(cancelAction)

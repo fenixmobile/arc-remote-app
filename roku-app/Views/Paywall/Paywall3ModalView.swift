@@ -287,23 +287,37 @@ class Paywall3ModalView: UIView {
     
     //MARK: - OBJC Functions
     @objc func termOfUseLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_terms_tap")
+
         NotificationCenter.default.post(name: NSNotification.Name("termsOfUse"), object: nil)
     }
     
     @objc func privacyPolicyLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_privacy_tap")
+
         NotificationCenter.default.post(name: NSNotification.Name("privacyPolicy"), object: nil)
     }
     
     @objc func restoreLabelTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_restore")
+
         NotificationCenter.default.post(name: NSNotification.Name("restore"), object: nil)
     }
     
     @objc private func closeButtonTapped() {
+        if placementId == "onclose" {
+            AnalyticsManager.shared.fxAnalytics.send(event: "onclose_purchase_close")
+        } else {
+            AnalyticsManager.shared.fxAnalytics.send(event: "paywall_close")
+        }
+
         loadingActivityIndicatorView.isHidden = true
         NotificationCenter.default.post(name: NSNotification.Name("modalClosed"), object: nil)
     }
     
     @objc func continueButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
+
         guard let selectedProduct = products.first(where: { $0.selected }),
               let fxPaywall = fxPaywall,
               let fxProduct = fxPaywall.products?.first else { return }

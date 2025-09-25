@@ -53,7 +53,7 @@ class DeviceDiscoveryViewController: UIViewController {
         startAutoDiscovery()
         print("🔍 DeviceDiscoveryViewController: viewWillAppear çağrıldı")
         if viewModel.discoveredDevices.isEmpty {
-isAutoDiscovery = true
+            isAutoDiscovery = true
             startDiscovery()
         }
     }
@@ -263,6 +263,11 @@ isAutoDiscovery = true
         viewModel.startDiscovery()
     }
     
+    private func startIncrementalDiscovery() {
+        refreshButton.isHidden = true
+        viewModel.startIncrementalDiscovery()
+    }
+    
     private func startSearchAnimation() {
         searchIconView.isHidden = false
         searchCircleView.isHidden = false
@@ -352,16 +357,19 @@ isAutoDiscovery = true
     }
     
     @objc private func closeButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "search_close_tap")
         dismiss(animated: true)
     }
     
     @objc private func infoButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "search_info_tap")
         let alert = UIAlertController(title: "Info", message: "This screen shows available TV devices on your network.", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
     
     @objc private func refreshButtonTapped() {
+        AnalyticsManager.shared.fxAnalytics.send(event: "search_refresh_tap")
         refreshButton.isHidden = true
         isAutoDiscovery = false
         startDiscovery()
@@ -369,6 +377,11 @@ isAutoDiscovery = true
     
     private func connectToDevice(_ device: TVDevice) {
         print("🔗 DeviceDiscoveryViewController: \(device.displayName) bağlantısı başlatılıyor")
+        
+        AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_tap", properties: [
+            "device_name": device.displayName,
+            "device_type": device.brand.rawValue
+        ])
         
         let alert = UIAlertController(title: "Connect", message: "Connecting to \(device.displayName)...", preferredStyle: .alert)
         
@@ -429,9 +442,9 @@ isAutoDiscovery = true
             guard let self = self else { return }
             
             if !self.viewModel.isDiscovering {
-                print("🔄 Otomatik discovery başlatılıyor...")
+                print("🔄 Otomatik incremental discovery başlatılıyor...")
                 self.isAutoDiscovery = true
-                self.startDiscovery()
+                self.startIncrementalDiscovery()
             }
         }
         
