@@ -23,6 +23,7 @@ struct Constants {
         static let name = "TV Remote App"
         static let description = "Universal Remote Control for Smart TVs"
         static let bundleIdentifier = "fenixmobile.rmt1.test"
+        static let apiBaseURL = "https://test.rokutvapp.com/"
     }
     
     // MARK: - Adapty Configuration

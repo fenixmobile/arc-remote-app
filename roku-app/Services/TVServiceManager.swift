@@ -16,7 +16,7 @@ class TVServiceManager: ObservableObject {
     private let networkMonitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")
     private let discoveryManager = DeviceDiscoveryManager()
-    private var currentService: TVServiceProtocol?
+    var currentService: TVServiceProtocol?
 
     init() {
         setupServices()
@@ -108,6 +108,9 @@ class TVServiceManager: ObservableObject {
             } else if let samsungService = service as? SamsungTVService {
                 device.port = samsungService.device.port
                 print("🔗 Samsung port güncellendi: \(device.port)")
+            } else if let androidService = service as? AndroidTVService {
+                device.port = androidService.device.port
+                print("🔗 Android TV port güncellendi: \(device.port)")
             }
             
             currentService = service
@@ -162,6 +165,109 @@ class TVServiceManager: ObservableObject {
 
     func isDeviceConnected(_ device: TVDevice) -> Bool {
         return connectedDevices.contains(where: { $0.id == device.id })
+    }
+    
+    func discoverAndroidTVDevices() async throws -> [TVDevice] {
+        var discoveredDevices: [TVDevice] = []
+        
+        let localNetwork = await getLocalNetworkRange()
+        
+        await withTaskGroup(of: [TVDevice].self) { group in
+            for ip in localNetwork {
+                group.addTask {
+                    return await self.scanIPForAndroidTV(ip)
+                }
+            }
+            
+            for await devices in group {
+                discoveredDevices.append(contentsOf: devices)
+            }
+        }
+        
+        return discoveredDevices
+    }
+    
+    private func getLocalNetworkRange() async -> [String] {
+        var ips: [String] = []
+        
+        let monitor = NWPathMonitor()
+        let queue = DispatchQueue(label: "NetworkMonitor")
+        
+        return await withCheckedContinuation { continuation in
+            monitor.pathUpdateHandler = { path in
+                if path.status == .satisfied {
+                    for interface in path.availableInterfaces {
+                        if case .wifi = interface.type {
+                            let connection = NWConnection(host: NWEndpoint.Host("8.8.8.8"), port: NWEndpoint.Port(integerLiteral: 53), using: .udp)
+                            connection.stateUpdateHandler = { state in
+                                if case .ready = state {
+                                    if let localEndpoint = connection.currentPath?.localEndpoint,
+                                       case .hostPort(let host, _) = localEndpoint {
+                                        let ipString = String(describing: host)
+                                        let baseIP = ipString.components(separatedBy: ".").prefix(3).joined(separator: ".")
+                                        for i in 1...254 {
+                                            ips.append("\(baseIP).\(i)")
+                                        }
+                                    }
+                                    connection.cancel()
+                                }
+                            }
+                            connection.start(queue: queue)
+                            break
+                        }
+                    }
+                }
+                monitor.cancel()
+                continuation.resume(returning: ips)
+            }
+            monitor.start(queue: queue)
+        }
+    }
+    
+    private func scanIPForAndroidTV(_ ip: String) async -> [TVDevice] {
+        let ports = [6467, 6466]
+        
+        for port in ports {
+            if await isAndroidTVDevice(ip: ip, port: port) {
+                let device = TVDevice(
+                    name: "Android TV Device",
+                    brand: .androidTV,
+                    ipAddress: ip,
+                    port: port
+                )
+                return [device]
+            }
+        }
+        
+        return []
+    }
+    
+    private func isAndroidTVDevice(ip: String, port: Int) async -> Bool {
+        let host = NWEndpoint.Host(ip)
+        let port = NWEndpoint.Port(integerLiteral: UInt16(port))
+        
+        return await withCheckedContinuation { continuation in
+            let connection = NWConnection(host: host, port: port, using: .tcp)
+            
+            connection.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    connection.cancel()
+                    continuation.resume(returning: true)
+                case .failed, .cancelled:
+                    continuation.resume(returning: false)
+                default:
+                    break
+                }
+            }
+            
+            connection.start(queue: .global())
+            
+            DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
+                connection.cancel()
+                continuation.resume(returning: false)
+            }
+        }
     }
 }
 
@@ -309,12 +415,16 @@ extension TVServiceManager: TVServiceDelegate {
             self.discoveredDevices = devices
         }
     }
-}
-
-enum TVServiceError: Error {
-    case unsupportedBrand
-    case connectionFailed(String)
-    case commandFailed(String)
-    case deviceNotFound
-    case networkError
+    
+    func tvService(_ service: TVServiceProtocol, didRequestPin device: TVDevice) {
+        print("🔗 TVServiceManager: tvService didRequestPin çağrıldı - \(device.name)")
+        
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("TVServiceDidRequestPin"),
+                object: nil,
+                userInfo: ["device": device]
+            )
+        }
+    }
 }

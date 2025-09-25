@@ -142,16 +142,22 @@ class OnboardingVC1: UIViewController {
         subLabel.alpha = 1
         continueButton.alpha = 1
 
-        UIView.animate(withDuration: 10, delay: 0.7, options: .curveLinear, animations: {
+        UIView.animate(withDuration: 2, delay: 0.1, options: .curveLinear, animations: {
             self.imageView.transform = .identity
             self.imageView.alpha = 1
         }, completion: nil)
     }
     
     @objc func continueButtonTapped() {
+        completeOnboarding()
         if let parentViewController = parent as? PageViewController {
             parentViewController.showNextPage()
         }
+    }
+    
+    func completeOnboarding() {
+        print("🎯 Onboarding tamamlandı - onBoardingSeen true yapılıyor")
+        SessionDataManager.shared.onBoardingSeen = true
     }
 }
 

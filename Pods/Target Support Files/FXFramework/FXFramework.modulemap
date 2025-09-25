@@ -1,6 +1,0 @@
-framework module FXFramework {
-  umbrella header "FXFramework-umbrella.h"
-
-  export *
-  module * { export * }
-}

@@ -433,6 +433,13 @@ class RemoteUIManager {
         panGesture.maximumNumberOfTouches = 1
         imageView.addGestureRecognizer(panGesture)
         
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTouchpadTap(_:)))
+        tapGesture.numberOfTapsRequired = 1
+        tapGesture.numberOfTouchesRequired = 1
+        imageView.addGestureRecognizer(tapGesture)
+        
+        panGesture.require(toFail: tapGesture)
+        
         return imageView
     }()
     
@@ -473,7 +480,11 @@ class RemoteUIManager {
             stackView.widthAnchor.constraint(equalToConstant: combinedRemoteButton.width),
         ])
         stackView.addArrangedSubview(.init())
-        stackView.addArrangedSubview(createRemoteButton(combinedRemoteButton.topButton))
+        
+        let topButton = createRemoteButton(combinedRemoteButton.topButton)
+        topButton.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(topButton)
+        
         let label: UILabel = .init()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = combinedRemoteButton.label
@@ -1783,6 +1794,25 @@ class RemoteUIManager {
            case .primeVideo: return "primeVideo"
            case .alexa: return "alexa"
            case .caption: return "caption"
+        }
+    }
+    
+    @objc private func handleTouchpadTap(_ gesture: UITapGestureRecognizer) {
+        guard let device = TVServiceManager.shared.currentDevice else {
+            print("❌ Touchpad Tap: currentDevice nil")
+            return
+        }
+        
+        print("🎯 Touchpad tap (select) - \(device.displayName)")
+        
+        Task {
+            do {
+                let command = TVRemoteCommand(command: "select")
+                try await TVServiceManager.shared.sendCommand(command, to: device)
+                print("✅ Touchpad select komut başarılı")
+            } catch {
+                print("❌ Touchpad select komut hatası: \(error.localizedDescription)")
+            }
         }
     }
     

@@ -55,6 +55,10 @@ class BaseTVService: NSObject, TVServiceProtocol {
         return false
     }
     
+    func didRequestPin(_ device: TVDevice) {
+        delegate?.tvService(self, didRequestPin: device)
+    }
+    
     
     func makeRequest(to url: URL, method: String = "POST", body: Data? = nil) async throws -> Data {
         var request = URLRequest(url: url)
@@ -72,7 +76,7 @@ class BaseTVService: NSObject, TVServiceProtocol {
         
         guard let httpResponse = response as? HTTPURLResponse else {
             print("❌ Invalid HTTP response")
-            throw TVServiceError.networkError
+            throw TVServiceError.networkError("Network request failed")
         }
         
         print("📊 HTTP Status: \(httpResponse.statusCode)")

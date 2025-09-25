@@ -38,6 +38,13 @@ class DeviceDiscoveryViewController: UIViewController {
         setupBindings()
         setupConstraints()
         refreshButton.isHidden = true
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePinRequest(_:)),
+            name: NSNotification.Name("TVServiceDidRequestPin"),
+            object: nil
+        )
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -396,6 +403,7 @@ isAutoDiscovery = true
         }
     }
     
+    
     private func navigateToRemoteController() {
         DispatchQueue.main.async {
             self.dismiss(animated: true) {
@@ -434,6 +442,64 @@ isAutoDiscovery = true
         autoDiscoveryTimer?.invalidate()
         autoDiscoveryTimer = nil
         print("⏰ Otomatik discovery timer durduruldu")
+    }
+    
+    @objc private func handlePinRequest(_ notification: Notification) {
+        guard let device = notification.userInfo?["device"] as? TVDevice else { return }
+        
+        print("🔐 PIN Request alındı: \(device.displayName)")
+        
+        let alert = UIAlertController(
+            title: "PIN Required",
+            message: "Please enter the 6-digit PIN displayed on your TV",
+            preferredStyle: .alert
+        )
+        
+        alert.addTextField { textField in
+            textField.placeholder = "Enter PIN"
+            textField.keyboardType = .numberPad
+            textField.textAlignment = .center
+        }
+        
+        let submitAction = UIAlertAction(title: "Submit", style: .default) { [weak self] _ in
+            guard let pin = alert.textFields?.first?.text, pin.count == 6 else {
+                self?.showPinError()
+                return
+            }
+            
+            Task {
+                do {
+                    if let androidService = TVServiceManager.shared.currentService as? AndroidTVService {
+                        try await androidService.verifyPin(pin)
+                        print("✅ PIN verification successful")
+                    }
+                } catch {
+                    print("❌ PIN verification failed: \(error)")
+                    DispatchQueue.main.async {
+                        self?.showPinError()
+                    }
+                }
+            }
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            print("❌ PIN verification cancelled")
+        }
+        
+        alert.addAction(submitAction)
+        alert.addAction(cancelAction)
+        
+        present(alert, animated: true)
+    }
+    
+    private func showPinError() {
+        let alert = UIAlertController(
+            title: "Invalid PIN",
+            message: "Please check the PIN and try again",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 }
 

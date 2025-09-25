@@ -1,19 +1,20 @@
-//
-//  SplashViewController.swift
-//  roku-app
-//
-//  Created by Ali İhsan Çağlayan on 8.09.2025.
-//
-
 import UIKit
+import Network
+import FXFramework
 
 class SplashViewController: UIViewController {
+    
+    var loginCompleted: Bool = false
+    var delayCompleted: Bool = false
+    
+    var connetionAlertController: UIAlertController?
+    var networkCheck = NetworkCheck.sharedInstance()
     
     lazy var splashOkImageView: UIImageView = {
         let animationView = UIImageView()
         animationView.translatesAutoresizingMaskIntoConstraints = false
         animationView.contentMode = .scaleAspectFit
-        animationView.image = .init(named: "splash.ok")
+        animationView.image = UIImage(named: "splash.ok")
         return animationView
     }()
     
@@ -21,7 +22,7 @@ class SplashViewController: UIViewController {
         let animationView = UIImageView()
         animationView.translatesAutoresizingMaskIntoConstraints = false
         animationView.contentMode = .scaleAspectFit
-        animationView.image = .init(named: "splash.right")
+        animationView.image = UIImage(named: "splash.right")
         return animationView
     }()
     
@@ -29,7 +30,7 @@ class SplashViewController: UIViewController {
         let animationView = UIImageView()
         animationView.translatesAutoresizingMaskIntoConstraints = false
         animationView.contentMode = .scaleAspectFit
-        animationView.image = .init(named: "splash.left")
+        animationView.image = UIImage(named: "splash.left")
         return animationView
     }()
     
@@ -37,7 +38,7 @@ class SplashViewController: UIViewController {
         let animationView = UIImageView()
         animationView.translatesAutoresizingMaskIntoConstraints = false
         animationView.contentMode = .scaleAspectFit
-        animationView.image = .init(named: "splash.up")
+        animationView.image = UIImage(named: "splash.up")
         return animationView
     }()
     
@@ -45,7 +46,7 @@ class SplashViewController: UIViewController {
         let animationView = UIImageView()
         animationView.translatesAutoresizingMaskIntoConstraints = false
         animationView.contentMode = .scaleAspectFit
-        animationView.image = .init(named: "splash.down")
+        animationView.image = UIImage(named: "splash.down")
         return animationView
     }()
     
@@ -58,14 +59,18 @@ class SplashViewController: UIViewController {
         return view
     }()
     
+    var loginCancellable: Cancelable?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
         setupConstraints()
         startAnimation()
+        connectionCheckAndSendDeviceInfo()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-            self?.navigateToMainApp()
+        DispatchQueue.main.asyncAfter(deadline: .now()+3) { [weak self] in
+            guard let self = self else { return }
+            self.delayCompleted = true
         }
     }
     
@@ -114,74 +119,182 @@ class SplashViewController: UIViewController {
         ])
     }
     
-    private func startAnimation() {
-        animateDirectionalArrows()
-    }
-    
-    private func animateDirectionalArrows() {
-        let animationSequence = [
-            (view: splashRightImageView, duration: 0.5),
-            (view: splashDownImageView, duration: 0.7),
-            (view: splashLeftImageView, duration: 0.7),
-            (view: splashUpImageView, duration: 0.7),
-            (view: splashOkImageView, duration: 0.7)
-        ]
-        
-        animateSequence(animationSequence, index: 0)
-    }
-    
-    private func animateSequence(_ sequence: [(view: UIImageView, duration: TimeInterval)], index: Int) {
-        guard index < sequence.count else {
-            animateCenterCircleAndNavigate()
-            return
-        }
-        
-        let currentView = sequence[index].view
-        let duration = sequence[index].duration
-        
-        UIView.animate(withDuration: duration, delay: 0.0, options: .curveEaseOut, animations: {
-            currentView.alpha = 0.0
-        }) { _ in
-            UIView.animate(withDuration: duration, delay: 0.0, options: .curveEaseIn, animations: {
-                currentView.alpha = 1.0
-            }) { _ in
-                self.animateSequence(sequence, index: index + 1)
-            }
-        }
-    }
-    
-    private func animateCenterCircleAndNavigate() {
-        centerCircle.alpha = 0.0
-        centerCircle.isHidden = false
-        
+    func startAnimation() {
         UIView.animate(withDuration: 0.5, delay: 0.0, options: .curveEaseOut, animations: {
-            self.centerCircle.alpha = 1.0
-        }) { _ in
-            UIView.animate(withDuration: 1.0, delay: 0.0, options: .curveEaseOut, animations: {
-                self.centerCircle.transform = CGAffineTransform(scaleX: 50, y: 50)
-            }) { _ in
-                self.navigateToMainApp()
+            self.splashRightImageView.alpha = 0.0
+        }) { (finished) in
+            if finished {
+                UIView.animate(withDuration: 0.7, delay: 0.0, options: .curveEaseIn, animations: {
+                    self.splashRightImageView.alpha = 1.0
+                    self.splashDownImageView.alpha = 0.0
+                }) { (finished) in
+                    if finished {
+                        UIView.animate(withDuration: 0.7, delay: 0.0, options: .curveEaseIn, animations: {
+                            self.splashDownImageView.alpha = 1.0
+                            self.splashLeftImageView.alpha = 0.0
+                        }) { (finished) in
+                            if finished {
+                                UIView.animate(withDuration: 0.7, delay: 0.0, options: .curveEaseIn, animations: {
+                                    self.splashLeftImageView.alpha = 1.0
+                                    self.splashUpImageView.alpha = 0.0
+                                }) { (finished) in
+                                    if finished {
+                                        UIView.animate(withDuration: 0.7, delay: 0.0, options: .curveEaseIn, animations: {
+                                            self.splashUpImageView.alpha = 1.0
+                                            self.splashOkImageView.alpha = 0.0
+                                        }) { (finished) in
+                                            if finished {
+                                                self.animateCenterCircleAndNavigate()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
     
-    private func navigateToMainApp() {
-        guard let window = view.window else { return }
-        
-        if UserDefaultsManager.shared.hasCompletedOnboarding {
-            let mainTabBarController = MainTabBarController()
-            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                window.rootViewController = mainTabBarController
-            }) { _ in
-                window.makeKeyAndVisible()
+    func animateCenterCircleAndNavigate() {
+        centerCircle.alpha = 0.0
+        UIView.animate(withDuration: 0.5, delay: 0.0, options: .curveEaseOut, animations: { [self] in
+            centerCircle.alpha = 1.0
+        }) { (finished) in
+            if finished {
+                UIView.animate(withDuration: 1.0, delay: 0.0, options: .curveEaseOut, animations: {
+                    [self] in
+                    centerCircle.isHidden = false
+                    centerCircle.transform = CGAffineTransform(scaleX: 50, y: 50)
+                    centerCircle.center = self.view.center
+                }) { (finished) in
+                    if finished {
+                        self.navigate()
+                    }
+                }
             }
+        }
+    }
+    
+    private func login() {
+        let deviceInfo = getDeviceInfo()
+        loginCancellable?.cancelTask()
+        loginCancellable = RemoteDataManager.shared.login(loginRequestDTO: .init(uuid: deviceInfo.deviceId,
+                                                                                 deviceModel: deviceInfo.model,
+                                                                                 userDeviceName: deviceInfo.name,
+                                                                                 osVersion: deviceInfo.osVersion,
+                                                                                 platform: "iOS",
+                                                                                 countryCode: deviceInfo.countryCode,
+                                                                                 language: deviceInfo.language,
+                                                                                 apiVersion: deviceInfo.appVersion)) { [weak self] session in
+            print("🔐 Login completion called - session: \(session != nil ? "SUCCESS" : "FAILED")")
+            self?.loginCompleted = true
+            if let session = session {
+                print("🔐 Login successful - userId: \(session.userId)")
+                self?.setUserId("\(session.userId)")
+                SessionDataManager.shared.setSession(session: session)
+            } else {
+                print("🔐 Login failed - no session received")
+            }
+            DispatchQueue.main.async {
+                self?.navigate()
+            }
+        }
+    }
+    
+    func setUserId(_ userID: String) {
+        print("🔐 setUserId called with: \(userID)")
+        InAppPurchaseHelper.shared.fxPurchase.setExternalUserId(userID) {error in
+            AnalyticsManager.shared.fxAnalytics.setUserId(userID)
+            Task {
+                await FX.shared.update()
+            }
+        }
+        if #available(iOS 14, *) {
+            FX.shared.requestATT()
+        }
+        print("🔐 User ID set: \(userID)")
+    }
+    
+    func getDeviceInfo() -> PhoneDeviceInfo {
+        var countryCode = ""
+        if #available(iOS 16, *) {
+            countryCode = Locale.current.language.region?.identifier ?? ""
         } else {
-            let pageViewController = PageViewController()
-            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                window.rootViewController = pageViewController
-            }) { _ in
-                window.makeKeyAndVisible()
+            countryCode = Locale.current.regionCode ?? ""
+        }
+        let versionNumber: String = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.0"
+        let arr = Locale.preferredLanguages.first?.components(separatedBy: "-")
+        return .init(deviceId: UIDevice.current.identifierForVendor?.uuidString ?? "",
+                     model: UIDevice.current.model,
+                     name: UIDevice.current.name,
+                     appVersion: versionNumber,
+                     osVersion: UIDevice.current.systemVersion,
+                     countryCode: countryCode,
+                     language: arr?.first ?? "")
+    }
+    
+    func navigate() {
+        if delayCompleted && loginCompleted {
+            if SessionDataManager.shared.onBoardingSeen {
+                let mainTabBarController = MainTabBarController()
+                self.navigationController?.setViewControllers([mainTabBarController], animated: false)
+            } else {
+                let pageViewController = PageViewController()
+                self.navigationController?.setViewControllers([pageViewController], animated: false)
             }
+        }
+    }
+    
+    func showConnectionAlert() {
+        connetionAlertController = showAlert(title: "Internet Connection",
+                                             message: "Check your internet connection",
+                                             actionTitle1: "Retry",
+                                             completion1: { self.retryConnect() },
+                                             actionTitle2: nil,
+                                             completion2: nil)
+    }
+    
+    func showAlert(title: String,
+                   message: String,
+                   actionTitle1: String?,
+                   completion1: (() -> ())? = nil,
+                   actionTitle2: String?,
+                   completion2: (() -> ())? = nil) -> UIAlertController? {
+        
+        let alertVC = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        
+        if let title1 = actionTitle1 {
+            alertVC.addAction(UIAlertAction(title: title1, style: .default, handler: { (action: UIAlertAction!) in
+                alertVC.dismiss(animated: true) {
+                    completion1?()
+                }
+            }))
+        }
+        
+        if let title2 = actionTitle2 {
+            alertVC.addAction(UIAlertAction(title: title2, style: .default, handler: { (action: UIAlertAction!) in
+                alertVC.dismiss(animated: true) {
+                    completion2?()
+                }
+            }))
+        }
+        DispatchQueue.main.async {
+            self.present(alertVC, animated: true, completion: nil)
+        }
+        return alertVC
+    }
+    
+    func retryConnect() {
+        connectionCheckAndSendDeviceInfo()
+    }
+    
+    func connectionCheckAndSendDeviceInfo() {
+        if networkCheck.currentStatus == .satisfied {
+            login()
+        } else {
+            showConnectionAlert()
         }
     }
 }

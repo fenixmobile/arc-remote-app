@@ -10,6 +10,7 @@ target 'roku-app' do
         pod 'Alamofire'
         pod 'BlueSocket'
         pod 'XMLCoder'
+        pod 'SwiftProtobuf'
 
   post_install do |installer|
     installer.pods_project.targets.each do |target|
