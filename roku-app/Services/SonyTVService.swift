@@ -22,29 +22,76 @@ class SonyTVService: BaseTVService {
             isConnected = true
             delegate?.tvService(self, didConnect: device)
         } catch {
-            throw TVServiceError.connectionFailed("Connection failed")
+            isConnected = false
+            throw TVServiceError.connectionFailed("Sony TV connection failed: \(error.localizedDescription)")
         }
     }
     
     override func sendCommand(_ command: TVRemoteCommand) async throws {
         guard isConnected else {
-            throw TVServiceError.connectionFailed("Connection failed")
+            throw TVServiceError.connectionFailed("Sony TV not connected")
         }
         
+        let mappedCommand = mapToSonyKeyCode(command.command)
         let url = URL(string: "\(device.connectionURL)/sony/ircc")!
         
         let commandData = try JSONSerialization.data(withJSONObject: [
             "id": 1,
             "method": "setIRCC",
             "params": [
-                "IRCCCode": command.command
+                "IRCCCode": mappedCommand
             ]
         ])
         
         do {
             _ = try await makeRequest(to: url, method: "POST", body: commandData)
         } catch {
-            throw TVServiceError.commandFailed("Command failed")
+            throw TVServiceError.commandFailed("Sony TV command failed: \(error.localizedDescription)")
+        }
+    }
+    
+    private func mapToSonyKeyCode(_ command: String) -> String {
+        switch command.lowercased() {
+        case "power":
+            return SonyTVService.sonyCommands["PowerOn"] ?? command
+        case "home":
+            return SonyTVService.sonyCommands["Home"] ?? command
+        case "back":
+            return SonyTVService.sonyCommands["Back"] ?? command
+        case "up":
+            return SonyTVService.sonyCommands["Up"] ?? command
+        case "down":
+            return SonyTVService.sonyCommands["Down"] ?? command
+        case "left":
+            return SonyTVService.sonyCommands["Left"] ?? command
+        case "right":
+            return SonyTVService.sonyCommands["Right"] ?? command
+        case "select", "ok":
+            return SonyTVService.sonyCommands["Select"] ?? command
+        case "volumeup":
+            return SonyTVService.sonyCommands["VolumeUp"] ?? command
+        case "volumedown":
+            return SonyTVService.sonyCommands["VolumeDown"] ?? command
+        case "mute":
+            return SonyTVService.sonyCommands["VolumeMute"] ?? command
+        case "play":
+            return SonyTVService.sonyCommands["Play"] ?? command
+        case "pause":
+            return SonyTVService.sonyCommands["Pause"] ?? command
+        case "stop":
+            return SonyTVService.sonyCommands["Stop"] ?? command
+        case "rewind", "rev":
+            return SonyTVService.sonyCommands["Rewind"] ?? command
+        case "fastforward", "fwd":
+            return SonyTVService.sonyCommands["FastForward"] ?? command
+        case "playpause":
+            return SonyTVService.sonyCommands["Play"] ?? command
+        case "keyboard":
+            return SonyTVService.sonyCommands["Keyboard"] ?? command
+        case "backspace":
+            return SonyTVService.sonyCommands["Backspace"] ?? command
+        default:
+            return command
         }
     }
     
@@ -61,6 +108,11 @@ class SonyTVService: BaseTVService {
         } catch {
             return false
         }
+    }
+    
+    override func disconnect() {
+        super.disconnect()
+        isConnected = false
     }
 }
 
