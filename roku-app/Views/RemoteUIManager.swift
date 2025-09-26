@@ -1742,7 +1742,14 @@ class RemoteUIManager {
     
     @objc func buttonAction(sender: UIButton) {
         guard let device = TVServiceManager.shared.currentDevice else {
-            print("❌ RemoteUIManager: currentDevice nil")
+            print("❌ RemoteUIManager: currentDevice nil - Device Discovery sayfası açılıyor")
+            showDeviceDiscovery()
+            return
+        }
+        
+        guard SessionDataManager.shared.isPremium else {
+            print("❌ RemoteUIManager: Premium gerekli - paywall gösteriliyor")
+            showPremiumPaywall()
             return
         }
         
@@ -1769,6 +1776,35 @@ class RemoteUIManager {
         }
     }
     
+    private func showPremiumPaywall() {
+        guard let topViewController = UIApplication.shared.windows.first?.rootViewController?.topMostViewController() else { return }
+        PaywallManager.shared.showDynamicPaywall(placementId: "main", from: topViewController)
+    }
+    
+    private func showDeviceDiscovery() {
+        guard let topViewController = UIApplication.shared.windows.first?.rootViewController?.topMostViewController() else { return }
+        let deviceDiscoveryVC = DeviceDiscoveryViewController()
+        let navController = UINavigationController(rootViewController: deviceDiscoveryVC)
+        topViewController.present(navController, animated: true)
+    }
+}
+
+extension UIViewController {
+    func topMostViewController() -> UIViewController {
+        if let presented = presentedViewController {
+            return presented.topMostViewController()
+        }
+        if let navigation = self as? UINavigationController {
+            return navigation.visibleViewController?.topMostViewController() ?? self
+        }
+        if let tab = self as? UITabBarController {
+            return tab.selectedViewController?.topMostViewController() ?? self
+        }
+        return self
+    }
+}
+
+extension RemoteUIManager {
     private func sendAnalyticsEvent(for buttonTag: Int) {
         if buttonTag == Buttons.mute.rawValue {
             let eventName = isMuted ? "main_unmute_tap" : "main_mute_tap"

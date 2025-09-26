@@ -215,6 +215,21 @@ class SplashViewController: UIViewController {
             FX.shared.requestATT()
         }
         print("🔐 User ID set: \(userID)")
+        checkPremiumStatus()
+    }
+    
+    private func checkPremiumStatus() {
+        InAppPurchaseHelper.shared.fxPurchase.getPurchaseInfo { result in
+            switch result {
+            case .success(let purchaseInfo):
+                let isPremium = purchaseInfo.info["premium"] as? Bool ?? false
+                SessionDataManager.shared.isPremium = isPremium
+                print("🔐 Premium status: \(isPremium)")
+            case .failure(let error):
+                print("🔐 Premium check failed: \(error)")
+                SessionDataManager.shared.isPremium = false
+            }
+        }
     }
     
     func getDeviceInfo() -> PhoneDeviceInfo {

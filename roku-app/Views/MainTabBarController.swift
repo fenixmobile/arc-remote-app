@@ -61,6 +61,7 @@ class MainTabBarController: UITabBarController {
     
     private func checkAndShowMainPaywall() {
         guard UserDefaultsManager.shared.hasCompletedOnboarding else { return }
+        guard !SessionDataManager.shared.isPremium else { return }
         guard !UserDefaultsManager.shared.shouldSkipNextMainPaywall else { 
             UserDefaultsManager.shared.markMainPaywallShown()
             return 

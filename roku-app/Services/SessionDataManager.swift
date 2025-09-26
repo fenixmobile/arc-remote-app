@@ -47,8 +47,7 @@ class SessionDataManager {
     
     var isPremium: Bool {
         get {
-            return true
-            UserDefaults.standard.bool(forKey: "isPremium")
+            return UserDefaults.standard.bool(forKey: "isPremium")
         }
         set {
             UserDefaults.standard.set(newValue, forKey: "isPremium")
