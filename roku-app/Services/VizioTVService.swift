@@ -22,26 +22,87 @@ class VizioTVService: BaseTVService {
             isConnected = true
             delegate?.tvService(self, didConnect: device)
         } catch {
-            throw TVServiceError.connectionFailed("Connection failed")
+            isConnected = false
+            throw TVServiceError.connectionFailed("Vizio TV connection failed: \(error.localizedDescription)")
         }
     }
     
     override func sendCommand(_ command: TVRemoteCommand) async throws {
         guard isConnected else {
-            throw TVServiceError.connectionFailed("Connection failed")
+            throw TVServiceError.connectionFailed("Vizio TV not connected")
         }
         
+        let mappedCommand = mapToVizioKeyCode(command.command)
         let url = URL(string: "\(device.connectionURL)/command")!
         
         let commandData = try JSONSerialization.data(withJSONObject: [
-            "command": command.command,
+            "command": mappedCommand,
             "params": command.parameters ?? [:]
         ])
         
         do {
             _ = try await makeRequest(to: url, method: "POST", body: commandData)
         } catch {
-            throw TVServiceError.commandFailed("Command failed")
+            throw TVServiceError.commandFailed("Vizio TV command failed: \(error.localizedDescription)")
+        }
+    }
+    
+    private func mapToVizioKeyCode(_ command: String) -> String {
+        switch command.lowercased() {
+        case "power":
+            return "POWER"
+        case "home":
+            return "HOME"
+        case "back":
+            return "BACK"
+        case "up":
+            return "UP"
+        case "down":
+            return "DOWN"
+        case "left":
+            return "LEFT"
+        case "right":
+            return "RIGHT"
+        case "select", "ok":
+            return "OK"
+        case "volumeup":
+            return "VOLUME_UP"
+        case "volumedown":
+            return "VOLUME_DOWN"
+        case "mute":
+            return "MUTE"
+        case "channelup":
+            return "CHANNEL_UP"
+        case "channeldown":
+            return "CHANNEL_DOWN"
+        case "play":
+            return "PLAY"
+        case "pause":
+            return "PAUSE"
+        case "stop":
+            return "STOP"
+        case "rewind", "rev":
+            return "REWIND"
+        case "fastforward", "fwd":
+            return "FAST_FORWARD"
+        case "playpause":
+            return "PLAY"
+        case "input":
+            return "INPUT"
+        case "menu":
+            return "MENU"
+        case "info":
+            return "INFO"
+        case "exit":
+            return "EXIT"
+        case "netflix":
+            return "NETFLIX"
+        case "amazon":
+            return "AMAZON"
+        case "youtube":
+            return "YOUTUBE"
+        default:
+            return command.uppercased()
         }
     }
     
@@ -58,5 +119,10 @@ class VizioTVService: BaseTVService {
         } catch {
             return false
         }
+    }
+    
+    override func disconnect() {
+        super.disconnect()
+        isConnected = false
     }
 }
