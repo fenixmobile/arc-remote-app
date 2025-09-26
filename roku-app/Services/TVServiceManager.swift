@@ -41,7 +41,7 @@ class TVServiceManager: ObservableObject {
             self.isDiscovering = true
         }
         
-        discoveryManager.startDiscovery()
+        discoveryManager.startIncrementalDiscovery()
     }
 
     func stopDiscovery() {
@@ -124,8 +124,19 @@ class TVServiceManager: ObservableObject {
             currentService = service
             connectedDeviceIds.insert(device.id)
             print("🔗 Current service saklandı: \(device.id)")
+            
+            AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_success", properties: [
+                "device_type": device.brand.displayName,
+                "device_name": device.name
+            ])
         } catch {
             print("❌ Bağlantı başarısız: \(error)")
+            
+            AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_fail", properties: [
+                "device_type": device.brand.displayName,
+                "device_name": device.name
+            ])
+            
             throw error
         }
 
@@ -145,14 +156,29 @@ class TVServiceManager: ObservableObject {
         print("🔗 Samsung TV'ye PIN ile bağlanılıyor: \(device.name) - \(device.ipAddress):\(device.port)")
         
         let service = SamsungTVService(device: device)
-        try await service.connect()
-
-        let finalDevice = device
-        DispatchQueue.main.async {
-            self.currentDevice = finalDevice
-            if !self.connectedDevices.contains(where: { $0.id == finalDevice.id }) {
-                self.connectedDevices.append(finalDevice)
+        
+        do {
+            try await service.connect()
+            
+            AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_pin_ok_success", properties: [
+                "device_type": device.brand.displayName,
+                "device_name": device.name
+            ])
+            
+            let finalDevice = device
+            DispatchQueue.main.async {
+                self.currentDevice = finalDevice
+                if !self.connectedDevices.contains(where: { $0.id == finalDevice.id }) {
+                    self.connectedDevices.append(finalDevice)
+                }
             }
+        } catch {
+            AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_pin_ok_failure", properties: [
+                "device_type": device.brand.displayName,
+                "device_name": device.name
+            ])
+            
+            throw error
         }
     }
 
@@ -444,21 +470,13 @@ extension TVServiceManager: TVServiceDelegate {
         for newDevice in newDevices {
             if let existingIndex = updatedDevices.firstIndex(where: { $0.ipAddress == newDevice.ipAddress }) {
                 updatedDevices[existingIndex] = newDevice
-                print("🔄 TVServiceManager: Cihaz güncellendi - \(newDevice.displayName)")
             } else {
                 updatedDevices.append(newDevice)
-                print("➕ TVServiceManager: Yeni cihaz eklendi - \(newDevice.displayName)")
             }
         }
         
         let currentDeviceIPs = Set(newDevices.map { $0.ipAddress })
-        updatedDevices = updatedDevices.filter { device in
-            let shouldKeep = currentDeviceIPs.contains(device.ipAddress)
-            if !shouldKeep {
-                print("➖ TVServiceManager: Cihaz kaldırıldı - \(device.displayName)")
-            }
-            return shouldKeep
-        }
+        updatedDevices = updatedDevices.filter { currentDeviceIPs.contains($0.ipAddress) }
         
         discoveredDevices = updatedDevices
         updateDiscoveryMessage()
@@ -474,5 +492,9 @@ extension TVServiceManager: TVServiceDelegate {
                 userInfo: ["device": device]
             )
         }
+    }
+    
+    func getCurrentDevices() -> [TVDevice] {
+        return discoveredDevices
     }
 }

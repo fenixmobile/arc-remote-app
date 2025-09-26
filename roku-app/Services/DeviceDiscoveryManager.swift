@@ -14,6 +14,7 @@ protocol DeviceDiscoveryDelegate: AnyObject {
     func didDiscoverDevicesIncremental(_ devices: [TVDevice])
     func didFinishDiscovery()
     func didUpdateDiscoveryMessage(_ message: String)
+    func getCurrentDevices() -> [TVDevice]
 }
 
 class DeviceDiscoveryManager {
@@ -23,11 +24,18 @@ class DeviceDiscoveryManager {
     private let queue = DispatchQueue(label: "DeviceDiscovery")
     private var incrementalDevices: [TVDevice] = []
     private var isIncrementalDiscovery = false
+    private var hasSentAnalyticsForCurrentSearch = false
+    private var hasSentSearchFailAnalytics = false
+    private var previouslySentDeviceIPs: Set<String> = []
     
     func startDiscovery() {
+        isIncrementalDiscovery = false
+        hasSentAnalyticsForCurrentSearch = false
+        hasSentSearchFailAnalytics = false
+        previouslySentDeviceIPs.removeAll()
         delegate?.didUpdateDiscoveryMessage("Cihazlar aranıyor...")
         
-        startSSDPDiscovery()
+        startSSDPDiscovery(isIncremental: false)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
             self?.stopDiscovery()
@@ -35,11 +43,12 @@ class DeviceDiscoveryManager {
     }
     
     func startIncrementalDiscovery() {
-        isIncrementalDiscovery = true
         incrementalDevices.removeAll()
+        hasSentAnalyticsForCurrentSearch = false
         delegate?.didUpdateDiscoveryMessage("Cihazlar güncelleniyor...")
         
-        startSSDPDiscovery()
+        isIncrementalDiscovery = true
+        startSSDPDiscovery(isIncremental: true)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
             self?.stopIncrementalDiscovery()
@@ -49,6 +58,7 @@ class DeviceDiscoveryManager {
     func stopDiscovery() {
         ssdpClients.forEach { $0.stop() }
         ssdpClients.removeAll()
+        sendSearchSuccessAnalytics()
         delegate?.didFinishDiscovery()
     }
     
@@ -57,14 +67,22 @@ class DeviceDiscoveryManager {
         ssdpClients.removeAll()
         
         if isIncrementalDiscovery {
+            sendSearchSuccessAnalytics()
             delegate?.didDiscoverDevicesIncremental(incrementalDevices)
-            isIncrementalDiscovery = false
+            incrementalDevices.removeAll()
         }
         
         delegate?.didFinishDiscovery()
     }
     
-    private func startSSDPDiscovery() {
+    private func startSSDPDiscovery(isIncremental: Bool) {
+        if !isIncremental {
+            isIncrementalDiscovery = false
+        }
+        
+        ssdpClients.forEach { $0.stop() }
+        ssdpClients.removeAll()
+        
         let searchTargets = [
             "urn:dial-multiscreen-org:service:dial:1",
             "urn:lge-com:service:webos-second-screen:1", 
@@ -77,13 +95,13 @@ class DeviceDiscoveryManager {
             client.delegate = self
             ssdpClients.append(client)
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.2) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.2) {
                 client.discoverService(forDuration: 3, searchTarget: target)
             }
         }
     }
     
-    private func getDeviceInfo(urlStr: String, host: String) {
+    private func getDeviceInfo(urlStr: String, host: String, isIncremental: Bool = false) {
         guard let url = URL(string: urlStr) else { return }
         
         let port = url.port ?? 8080
@@ -95,7 +113,7 @@ class DeviceDiscoveryManager {
         URLSession.shared.dataTask(with: urlRequest) { [weak self] data, response, error in
             if let data = data {
                 if let response: SharedTVDTO = self?.decode(data) {
-                    self?.addDevice(sharedTVDTO: response, host: host, port: port)
+                    self?.addDevice(sharedTVDTO: response, host: host, port: port, isIncremental: isIncremental)
                 }
             }
         }.resume()
@@ -111,7 +129,7 @@ class DeviceDiscoveryManager {
         }
     }
     
-    private func addDevice(sharedTVDTO: SharedTVDTO, host: String, port: Int = 8080) {
+    private func addDevice(sharedTVDTO: SharedTVDTO, host: String, port: Int = 8080, isIncremental: Bool = false) {
         guard let manufacturer = sharedTVDTO.device?.manufacturer?.lowercased() else { return }
         guard let modelName = sharedTVDTO.device?.modelName?.lowercased() else { return }
         
@@ -125,10 +143,8 @@ class DeviceDiscoveryManager {
             port: port
         )
         
-        if isIncrementalDiscovery {
-            if !incrementalDevices.contains(where: { $0.ipAddress == device.ipAddress }) {
-                incrementalDevices.append(device)
-            }
+        if isIncremental {
+            incrementalDevices.append(device)
         } else {
             delegate?.didDiscoverDevice(device)
         }
@@ -193,6 +209,44 @@ class DeviceDiscoveryManager {
             return deviceName
         }
     }
+    
+    private func sendSearchSuccessAnalytics() {
+        guard !hasSentAnalyticsForCurrentSearch else { return }
+        
+        let devicesToSend: [TVDevice]
+        
+        if isIncrementalDiscovery {
+            devicesToSend = incrementalDevices
+        } else {
+            devicesToSend = delegate?.getCurrentDevices() ?? []
+        }
+        
+        let newDevices = devicesToSend.filter { !previouslySentDeviceIPs.contains($0.ipAddress) }
+        
+        if newDevices.isEmpty {
+            sendSearchFailAnalytics()
+            return
+        }
+        
+        let devicesArray = newDevices.map { device in
+            [
+                "device_type": device.brand.displayName,
+                "device_name": device.name
+            ]
+        }
+        
+        AnalyticsManager.shared.fxAnalytics.send(event: "search_success", properties: ["devices": devicesArray])
+        
+        newDevices.forEach { previouslySentDeviceIPs.insert($0.ipAddress) }
+        hasSentAnalyticsForCurrentSearch = true
+    }
+    
+    private func sendSearchFailAnalytics() {
+        guard !hasSentSearchFailAnalytics else { return }
+        
+        AnalyticsManager.shared.fxAnalytics.send(event: "search_fail")
+        hasSentSearchFailAnalytics = true
+    }
 }
 
 extension DeviceDiscoveryManager: SSDPDiscoveryDelegate {
@@ -200,7 +254,7 @@ extension DeviceDiscoveryManager: SSDPDiscoveryDelegate {
         guard let location = service.location,
               let host = service.host else { return }
         
-        getDeviceInfo(urlStr: location, host: host)
+        getDeviceInfo(urlStr: location, host: host, isIncremental: isIncrementalDiscovery)
     }
     
     func ssdpDiscovery(_ discovery: SSDPDiscovery, didFinishWithError error: Error) {

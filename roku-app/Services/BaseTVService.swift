@@ -56,6 +56,10 @@ class BaseTVService: NSObject, TVServiceProtocol {
     }
     
     func didRequestPin(_ device: TVDevice) {
+        AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_request_pin", properties: [
+            "device_type": device.brand.displayName,
+            "device_name": device.name
+        ])
         delegate?.tvService(self, didRequestPin: device)
     }
     

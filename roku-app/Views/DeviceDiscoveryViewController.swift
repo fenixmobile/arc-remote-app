@@ -14,6 +14,7 @@ class DeviceDiscoveryViewController: UIViewController {
     private var cancellables = Set<AnyCancellable>()
     private var autoDiscoveryTimer: Timer?
     private var isAutoDiscovery = false
+    private var pendingPinDevice: TVDevice?
     
     private var searchIconWidthConstraint: NSLayoutConstraint?
     private var searchIconHeightConstraint: NSLayoutConstraint?
@@ -461,6 +462,7 @@ class DeviceDiscoveryViewController: UIViewController {
         guard let device = notification.userInfo?["device"] as? TVDevice else { return }
         
         print("🔐 PIN Request alındı: \(device.displayName)")
+        pendingPinDevice = device
         
         let alert = UIAlertController(
             title: "PIN Required",
@@ -495,8 +497,15 @@ class DeviceDiscoveryViewController: UIViewController {
             }
         }
         
-        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { _ in
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
             print("❌ PIN verification cancelled")
+            
+            if let device = self?.pendingPinDevice {
+                AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_pin_cancel", properties: [
+                    "device_type": device.brand.displayName,
+                    "device_name": device.name
+                ])
+            }
         }
         
         alert.addAction(submitAction)
