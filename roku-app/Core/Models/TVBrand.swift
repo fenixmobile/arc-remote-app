@@ -14,6 +14,9 @@ enum TVBrand: String, CaseIterable, Codable {
     case samsung = "Samsung TV"
     case sony = "Sony TV"
     case tcl = "TCL TV"
+    case tclRoku = "TCL Roku TV"
+    case tclAndroid = "TCL Android TV"
+    case tclNative = "TCL Native TV"
     case lg = "LG TV"
     case philipsAndroid = "Philips Android TV"
     case philips = "Philips TV"
@@ -41,6 +44,12 @@ enum TVBrand: String, CaseIterable, Codable {
         case .sony:
             return .systemBlue
         case .tcl:
+            return .systemGray
+        case .tclRoku:
+            return .systemPurple
+        case .tclAndroid:
+            return .systemGreen
+        case .tclNative:
             return .systemGray
         case .lg:
             return .systemRed
@@ -70,7 +79,13 @@ enum TVBrand: String, CaseIterable, Codable {
         case .sony:
             return .braviaAPI
         case .tcl:
+            return .tclNative
+        case .tclRoku:
             return .rokuProtocol
+        case .tclAndroid:
+            return .androidTV
+        case .tclNative:
+            return .tclNative
         case .lg:
             return .webOS
         case .philipsAndroid:
@@ -99,4 +114,5 @@ enum TVConnectionType {
     case philipsAPI
     case vizioAPI
     case panasonicAPI
+    case tclNative
 }

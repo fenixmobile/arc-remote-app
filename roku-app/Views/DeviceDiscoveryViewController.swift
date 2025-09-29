@@ -1,5 +1,6 @@
 import UIKit
 import Combine
+import Network
 
 class DeviceDiscoveryViewController: UIViewController {
     
@@ -25,6 +26,8 @@ class DeviceDiscoveryViewController: UIViewController {
     private var searchIconCenterYConstraint: NSLayoutConstraint?
     private var searchCircleCenterXConstraint: NSLayoutConstraint?
     private var searchCircleCenterYConstraint: NSLayoutConstraint?
+    
+    private var localNetworkPermissionRequested = false
     
     private enum Constants {
         static let cellHeight: CGFloat = 80
@@ -53,9 +56,15 @@ class DeviceDiscoveryViewController: UIViewController {
         refreshButton.isHidden = true
         startAutoDiscovery()
         print("🔍 DeviceDiscoveryViewController: viewWillAppear çağrıldı")
-        if viewModel.discoveredDevices.isEmpty {
-            isAutoDiscovery = true
-            startDiscovery()
+        
+        requestLocalNetworkPermissionIfNeeded { [weak self] in
+            DispatchQueue.main.async {
+                print("🔍 Permission request completed, starting discovery...")
+                if self?.viewModel.discoveredDevices.isEmpty == true {
+                    self?.isAutoDiscovery = true
+                    self?.startDiscovery()
+                }
+            }
         }
     }
     
@@ -522,6 +531,59 @@ class DeviceDiscoveryViewController: UIViewController {
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+    
+    private func requestLocalNetworkPermissionIfNeeded(completion: @escaping () -> Void) {
+        guard !localNetworkPermissionRequested else {
+            completion()
+            return
+        }
+        
+        localNetworkPermissionRequested = true
+        
+        #if targetEnvironment(simulator)
+        print("🔍 Simulator: Local network permission request simulated")
+        completion()
+        #else
+        
+        let monitor = NWPathMonitor()
+        let monitorQueue = DispatchQueue(label: "NetworkPermissionMonitor")
+        
+        monitor.pathUpdateHandler = { _ in }
+        monitor.start(queue: monitorQueue)
+        
+        let browser = NWBrowser(for: .bonjourWithTXTRecord(type: "_apple-mobdev2._tcp", domain: nil), using: NWParameters())
+        
+        browser.stateUpdateHandler = { state in
+            switch state {
+            case .setup, .ready, .failed:
+                DispatchQueue.main.async {
+                    browser.cancel()
+                    monitor.cancel()
+                    completion()
+                }
+            case .cancelled:
+                DispatchQueue.main.async {
+                    completion()
+                }
+            case .waiting(_):
+                print("🔍 Waiting for local network permission...")
+                DispatchQueue.main.async {
+                    browser.cancel()
+                    monitor.cancel()
+                    completion()
+                }
+            @unknown default:
+                DispatchQueue.main.async {
+                    completion()
+                }
+            }
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.1) {
+            browser.start(queue: monitorQueue)
+        }
+        #endif
     }
 }
 

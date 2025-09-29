@@ -84,6 +84,12 @@ class TVServiceManager: ObservableObject {
             return SonyTVService(device: device)
         case .tcl:
             return TCLTVService(device: device)
+        case .tclRoku:
+            return RokuTVService(device: device)
+        case .tclAndroid:
+            return AndroidTVService(device: device)
+        case .tclNative:
+            return TCLTVService(device: device)
         case .lg:
             return LGTVService(device: device)
         case .philipsAndroid:

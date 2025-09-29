@@ -169,7 +169,6 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
             status.image = UIImage(named: "not.connected")
             print("❌ TVRemoteViewController: Bağlantı durumu - Not Connected")
         }
-        setupDefaultUI()
     }
     
     private func setupDefaultUI() {

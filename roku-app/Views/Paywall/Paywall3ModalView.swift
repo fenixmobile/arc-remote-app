@@ -338,7 +338,7 @@ class Paywall3ModalView: UIView {
                 switch result {
                 case .success(let purchaseInfo):
                     print("Paywall3ModalView: Purchase successful: \(purchaseInfo)")
-                    NotificationCenter.default.post(name: NSNotification.Name("PurchaseCompleted"), object: nil)
+                        NotificationCenter.default.post(name: NSNotification.Name("PurchaseCompleted"), object: nil)
                 case .failure(let error):
                     print("Paywall3ModalView: Purchase failed: \(error)")
                     self?.handlePurchaseFailure(error: error)

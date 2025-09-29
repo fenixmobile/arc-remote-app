@@ -387,14 +387,18 @@ class Paywall2ViewController: UIViewController {
     }
     
     private func handlePurchaseSuccess() {
-        guard let window = view.window else { return }
-        
-        dismiss(animated: true) {
-            let mainTabBarController = MainTabBarController()
-            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                window.rootViewController = mainTabBarController
-            }) { _ in
-                window.makeKeyAndVisible()
+        if placementId == "main" {
+            dismiss(animated: true, completion: nil)
+        } else {
+            guard let window = view.window else { return }
+            
+            dismiss(animated: true) {
+                let mainTabBarController = MainTabBarController()
+                UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                    window.rootViewController = mainTabBarController
+                }) { _ in
+                    window.makeKeyAndVisible()
+                }
             }
         }
     }

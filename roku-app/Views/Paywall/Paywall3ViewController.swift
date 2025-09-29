@@ -167,7 +167,11 @@ class Paywall3ViewController: UIViewController {
         paywall3ModalView.loadingActivityIndicatorView.isHidden = true
         paywall3ModalView.loadingActivityIndicatorView.stopAnimating()
         
-        navigateToMainPage()
+        if placementId == "main" {
+            dismiss(animated: true, completion: nil)
+        } else {
+            navigateToMainPage()
+        }
     }
     
     @objc func showAlert(_ notification: Notification) {
@@ -183,14 +187,18 @@ class Paywall3ViewController: UIViewController {
     }
     
     @objc func handlePurchaseCompleted() {
-        guard let window = view.window else { return }
-        
-        dismiss(animated: true) {
-            let mainTabBarController = MainTabBarController()
-            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                window.rootViewController = mainTabBarController
-            }) { _ in
-                window.makeKeyAndVisible()
+        if placementId == "main" {
+            dismiss(animated: true, completion: nil)
+        } else {
+            guard let window = view.window else { return }
+            
+            dismiss(animated: true) {
+                let mainTabBarController = MainTabBarController()
+                UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                    window.rootViewController = mainTabBarController
+                }) { _ in
+                    window.makeKeyAndVisible()
+                }
             }
         }
     }

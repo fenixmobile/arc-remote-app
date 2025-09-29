@@ -122,6 +122,7 @@ roku-app/
 - **KEEP RESPONSES SHORT** - Be concise and to the point
 - **SHORT COMMIT MESSAGES** - Use brief, descriptive commit messages
 - **NO AUTO COMMIT** - Never automatically commit changes without explicit user request
+- **NO AUTO PUSH** - Never automatically push changes without explicit user request
 - Focus on essential information only
 - Avoid lengthy explanations unless specifically requested
 
