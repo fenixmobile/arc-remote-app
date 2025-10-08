@@ -2,7 +2,7 @@
 //  FireTVPinVerifyRequestDTO.swift
 //  roku-app
 //
-//  Created by Ali İhsan Çağlayan on 8.09.2025.
+//  Created by Sengel on 8.09.2025.
 //
 
 import Foundation
