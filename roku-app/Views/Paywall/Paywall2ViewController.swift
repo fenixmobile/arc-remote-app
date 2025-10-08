@@ -387,6 +387,8 @@ class Paywall2ViewController: UIViewController {
     }
     
     private func handlePurchaseSuccess() {
+        SessionDataManager.shared.isPremium = true
+        
         if placementId == "main" {
             dismiss(animated: true, completion: nil)
         } else {

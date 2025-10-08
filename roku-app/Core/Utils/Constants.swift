@@ -20,10 +20,14 @@ struct Constants {
     
     // MARK: - App Information
     struct App {
-        static let name = "TV Remote App"
+        static let name = "Universal Remote"
         static let description = "Universal Remote Control for Smart TVs"
         static let bundleIdentifier = "fenixmobile.rmt1.test"
-        static let apiBaseURL = "https://test.rokutvapp.com/"
+        #if DEBUG
+        static let apiBaseURL = "https://rokutvapp.com/"
+        #else
+        static let apiBaseURL = "https://rokutvapp.com/"
+        #endif
     }
     
     // MARK: - Adapty Configuration
@@ -35,5 +39,21 @@ struct Constants {
         static let apiKey = "public_live_5eRm2KER.laualwVctq01FSEBRGK4"
         static let localeCode = "en"
         #endif
+    }
+    
+    // MARK: - Analytics Configuration
+    struct Analytics {
+        #if DEBUG
+        static let adjustAppToken = "rgbzo43nbhts"
+        static let amplitudeApiKey = "934056b14c4e683662950f89b00a244f"
+        #else
+        static let adjustAppToken = "vrgzpy7xou80"
+        static let amplitudeApiKey = "df2d40402771da1104f2d645e8830ff9"
+        #endif
+    }
+    
+    // MARK: - TV Configuration
+    struct TV {
+        static let fireTvApiKey = "0987654321"
     }
 }

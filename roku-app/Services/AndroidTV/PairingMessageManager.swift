@@ -17,7 +17,7 @@ class PairingMessageManager {
     
     private func loadSystemInfo() {
         manufacturer = ""
-        model = "Universal Remote"
+        model = Constants.App.name
     }
     
     private func createMessage(payload: Pairing_PairingMessage) -> Data? {

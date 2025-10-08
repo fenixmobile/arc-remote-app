@@ -17,7 +17,7 @@ class RemoteMessageManager {
         var config = Remote_RemoteConfigure()
         config.code1 = 622
         var deviceInfo = Remote_RemoteDeviceInfo()
-        deviceInfo.model = "Universal Remote"
+        deviceInfo.model = Constants.App.name
         deviceInfo.vendor = ""
         deviceInfo.unknown1 = 1
         deviceInfo.unknown2 = "1"

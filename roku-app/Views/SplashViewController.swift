@@ -219,16 +219,9 @@ class SplashViewController: UIViewController {
     }
     
     private func checkPremiumStatus() {
-        InAppPurchaseHelper.shared.fxPurchase.getPurchaseInfo { result in
-            switch result {
-            case .success(let purchaseInfo):
-                let isPremium = purchaseInfo.info["premium"] as? Bool ?? false
-                SessionDataManager.shared.isPremium = isPremium
-                print("🔐 Premium status: \(isPremium)")
-            case .failure(let error):
-                print("🔐 Premium check failed: \(error)")
-                SessionDataManager.shared.isPremium = false
-            }
+        InAppPurchaseHelper.shared.getPremiumInfo { isPremium in
+            SessionDataManager.shared.isPremium = isPremium
+            print("🔐 Premium status: \(isPremium)")
         }
     }
     

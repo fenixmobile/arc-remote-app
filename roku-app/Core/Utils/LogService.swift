@@ -12,7 +12,7 @@ import Network
 class LogService {
     static let shared = LogService()
     
-    private let baseURL = "https://api.yourdomain.com/logs"
+    private let baseURL = Constants.App.apiBaseURL + "logs"
     private let session: Session
     private let networkMonitor = NWPathMonitor()
     private var currentNetworkType: String = "unknown"

@@ -5,8 +5,8 @@ import UIKit
 class FireTVService: BaseTVService, URLSessionDelegate {
     
     private var fireTVToken: String?
-    private let fireTVApiKey = "0987654321"
-    private let appName = "Universal Remote"
+    private let fireTVApiKey = Constants.TV.fireTvApiKey
+    private let appName = Constants.App.name
     private let tokenStorageKey = "FireTVTokens"
     private lazy var urlSession: URLSession = {
         let config = URLSessionConfiguration.default
