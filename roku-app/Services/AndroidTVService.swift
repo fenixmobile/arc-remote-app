@@ -151,7 +151,7 @@ class AndroidTVService: BaseTVService, URLSessionTaskDelegate {
                 print("Data received: \(message?.debugDescription ?? "nil")")
                 if self.pairing && self.readCounter == 1 {
                     self.pairing = false
-                    if message?.status == .ok || data.count == 43 {
+                    if message?.status == .ok {
                         self.isPaired = true
                         self.isConnected = true
                         self.delegate?.tvService(self, didConnect: self.device)

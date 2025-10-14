@@ -493,6 +493,25 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
+    
+    @objc func handlePurchaseCompleted() {
+        SessionDataManager.shared.isPremium = true
+        
+        if placementId == "main" {
+            dismiss(animated: true, completion: nil)
+        } else {
+            guard let window = view.window else { return }
+            
+            dismiss(animated: true) {
+                let mainTabBarController = MainTabBarController()
+                UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                    window.rootViewController = mainTabBarController
+                }) { _ in
+                    window.makeKeyAndVisible()
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Extenisons

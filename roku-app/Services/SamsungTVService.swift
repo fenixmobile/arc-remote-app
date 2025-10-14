@@ -47,6 +47,11 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
     override func connect() async throws {
         print("🔍 Samsung TV WebSocket bağlantı denemesi başladı: \(device.ipAddress)")
         
+        if isConnected {
+            print("✅ Samsung TV zaten bağlı, yeniden bağlanmaya gerek yok")
+            return
+        }
+        
         let existingToken = getDeviceToken(deviceId: device.id.uuidString)
         
         if let token = existingToken, !token.isEmpty {

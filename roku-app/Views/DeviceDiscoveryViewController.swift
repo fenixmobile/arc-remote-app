@@ -426,6 +426,26 @@ class DeviceDiscoveryViewController: UIViewController {
         }
     }
     
+    private func disconnectFromDevice(_ device: TVDevice) {
+        print("🔌 DeviceDiscoveryViewController: \(device.displayName) bağlantısı kesiliyor")
+        
+        AnalyticsManager.shared.fxAnalytics.send(event: "device_disconnect_tap", properties: [
+            "device_name": device.displayName,
+            "device_type": device.brand.rawValue
+        ])
+        
+        TVServiceManager.shared.disconnectFromDevice(device)
+        
+        DispatchQueue.main.async {
+            self.tableView.reloadData()
+        }
+        
+        AnalyticsManager.shared.fxAnalytics.send(event: "device_disconnect_success", properties: [
+            "device_name": device.displayName,
+            "device_type": device.brand.rawValue
+        ])
+    }
+    
     
     private func navigateToRemoteController() {
         DispatchQueue.main.async {
@@ -603,6 +623,9 @@ extension DeviceDiscoveryViewController: UITableViewDataSource {
         cell.onConnectTapped = { [weak self] in
             self?.connectToDevice(device)
         }
+        cell.onDisconnectTapped = { [weak self] in
+            self?.disconnectFromDevice(device)
+        }
         return cell
     }
 }
@@ -633,6 +656,7 @@ class DeviceTableViewCell: UITableViewCell {
     private let connectButton = UIButton()
     
     var onConnectTapped: (() -> Void)?
+    var onDisconnectTapped: (() -> Void)?
     
     private enum Constants {
         static let cornerRadius: CGFloat = 12
@@ -759,7 +783,11 @@ class DeviceTableViewCell: UITableViewCell {
     }
     
     @objc private func connectButtonTapped() {
-        onConnectTapped?()
+        if connectButton.title(for: .normal) == "Disconnect" {
+            onDisconnectTapped?()
+        } else {
+            onConnectTapped?()
+        }
     }
     
     func configure(with device: TVDevice) {
@@ -771,15 +799,23 @@ class DeviceTableViewCell: UITableViewCell {
         deviceIconImageView.image = UIImage(named: iconName) ?? UIImage(systemName: "tv")
         deviceIconImageView.tintColor = deviceIconImageView.image == UIImage(systemName: "tv") ? device.brand.tintColor : .white
         
-        let isConnected = TVServiceManager.shared.connectedDeviceIds.contains(device.id)
+        let isConnected = TVServiceManager.shared.currentDevice?.id == device.id || 
+                         TVServiceManager.shared.connectedDeviceIds.contains(device.id) ||
+                         (TVServiceManager.shared.currentDevice?.ipAddress == device.ipAddress && 
+                          TVServiceManager.shared.currentDevice?.port == device.port)
+        
         if isConnected {
             connectionStatusLabel.text = "Connected"
             connectionStatusLabel.textColor = .white
             connectionStatusView.backgroundColor = .systemGreen
+            connectButton.setTitle("Disconnect", for: .normal)
+            connectButton.backgroundColor = UIColor(red: 0.8, green: 0.3, blue: 0.3, alpha: 1.0)
         } else {
             connectionStatusLabel.text = ""
             connectionStatusLabel.textColor = .clear
             connectionStatusView.backgroundColor = .clear
+            connectButton.setTitle("Connect", for: .normal)
+            connectButton.backgroundColor = UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
         }
     }
 }
