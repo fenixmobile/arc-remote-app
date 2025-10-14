@@ -47,12 +47,33 @@ class SettingsViewController: UIViewController {
         setupUI()
         setupConstraints()
         setupSettingsItems()
+        setupNotifications()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        isPremium = SessionDataManager.shared.isPremium
         setupSettingsItems()
         tableView.reloadData()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(self, selector: #selector(premiumStatusChanged), name: NSNotification.Name("PremiumStatusChanged"), object: nil)
+    }
+    
+    @objc private func premiumStatusChanged(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let isPremium = userInfo["isPremium"] as? Bool else { return }
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.isPremium = isPremium
+            self?.setupSettingsItems()
+            self?.tableView.reloadData()
+        }
     }
     
     private func setupUI() {
@@ -121,7 +142,30 @@ class SettingsViewController: UIViewController {
     
     private func restorePurchases() {
         AnalyticsManager.shared.fxAnalytics.send(event: "settings_restore_purchase")
-        let alert = UIAlertController(title: "Restore Purchases", message: "This feature will restore your previous purchases", preferredStyle: .alert)
+        
+        PaywallHelper.shared.restorePurchases { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let purchaseInfo):
+                    print("SettingsViewController: Restore successful: \(purchaseInfo)")
+                    SessionDataManager.shared.isPremium = true
+                    self?.showRestoreSuccessAlert()
+                case .failure(let error):
+                    print("SettingsViewController: Restore failed: \(error)")
+                    self?.showRestoreFailureAlert()
+                }
+            }
+        }
+    }
+    
+    private func showRestoreSuccessAlert() {
+        let alert = UIAlertController(title: "Restore Successful", message: "Your purchases have been restored successfully.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func showRestoreFailureAlert() {
+        let alert = UIAlertController(title: "Restore Failed", message: "No previous purchases found to restore.", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }

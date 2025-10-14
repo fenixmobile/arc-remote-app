@@ -467,7 +467,31 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         self.loadingActivityIndicatorView.isHidden = false
         self.loadingActivityIndicatorView.startAnimating()
         
+        PaywallHelper.shared.restorePurchases { [weak self] result in
+            DispatchQueue.main.async {
+                self?.loadingActivityIndicatorView.stopAnimating()
+                self?.loadingActivityIndicatorView.isHidden = true
+                
+                switch result {
+                case .success(let purchaseInfo):
+                    print("Paywall1ViewController: Restore successful: \(purchaseInfo)")
+                    self?.handlePurchaseCompleted()
+                case .failure(let error):
+                    print("Paywall1ViewController: Restore failed: \(error)")
+                    self?.showRestoreFailureAlert()
+                }
+            }
+        }
+        
         tableView.reloadData()
+    }
+    
+    private func showRestoreFailureAlert() {
+        let alert = UIAlertController(title: "Restore Failed", 
+                                    message: "No previous purchases found to restore.", 
+                                    preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 }
 

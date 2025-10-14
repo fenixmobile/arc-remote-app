@@ -161,6 +161,30 @@ class Paywall3ViewController: UIViewController {
         AnalyticsManager.shared.fxAnalytics.send(event: "paywall_restore")
 
         paywall3ModalView.loadingActivityIndicatorView.startAnimating()
+        
+        PaywallHelper.shared.restorePurchases { [weak self] result in
+            DispatchQueue.main.async {
+                self?.paywall3ModalView.loadingActivityIndicatorView.stopAnimating()
+                self?.paywall3ModalView.loadingActivityIndicatorView.isHidden = true
+                
+                switch result {
+                case .success(let purchaseInfo):
+                    print("Paywall3ViewController: Restore successful: \(purchaseInfo)")
+                    self?.handlePurchaseCompleted()
+                case .failure(let error):
+                    print("Paywall3ViewController: Restore failed: \(error)")
+                    self?.showRestoreFailureAlert()
+                }
+            }
+        }
+    }
+    
+    private func showRestoreFailureAlert() {
+        let alert = UIAlertController(title: "Restore Failed", 
+                                    message: "No previous purchases found to restore.", 
+                                    preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
     
     @objc func modalClosed() {

@@ -15,8 +15,6 @@ struct AppSession {
     let isTrial: Bool
     let token: String
     let logLevel: String
-    let chatCount: Int
-    let freeChatLimit: Int
     
     func getAllProductIds() -> [String] {
         return []

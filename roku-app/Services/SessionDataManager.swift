@@ -15,7 +15,6 @@ class SessionDataManager {
         interstitialAdsFrequency = session.interstitialAdsFrequency
         token = session.token
         logLevel = session.logLevel
-        leftFreeChatLimit = session.freeChatLimit - session.chatCount
     }
     
     var buttonText: String = ""
@@ -24,8 +23,6 @@ class SessionDataManager {
     var showBannerAds: Bool = false
     var showInterstitialAds: Bool = false
     var interstitialAdsFrequency: Int = 5
-    
-    var leftFreeChatLimit: Int = 5
     
     var logLevel: String {
         get {
@@ -51,6 +48,7 @@ class SessionDataManager {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: "isPremium")
+            NotificationCenter.default.post(name: NSNotification.Name("PremiumStatusChanged"), object: nil, userInfo: ["isPremium": newValue])
         }
     }
     

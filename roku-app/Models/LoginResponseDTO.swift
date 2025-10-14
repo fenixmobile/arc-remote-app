@@ -12,8 +12,6 @@ struct LoginResponseDataDTO: Decodable {
     let locale: String
     let isPremium: Bool
     var isTrial: Bool?
-    var chatCount: Int?
-    var freeChatLimit: Int?
     let token: String
     let logLevel: String
     
@@ -29,8 +27,6 @@ struct LoginResponseDataDTO: Decodable {
         case locale = "locale"
         case isPremium = "isPremium"
         case isTrial = "isTrial"
-        case chatCount = "chatCount"
-        case freeChatLimit = "freeChatLimit"
         case token = "token"
         case logLevel = "logLevel"
     }
@@ -48,11 +44,9 @@ extension LoginResponseDataDTO {
                      interstitialAdsFrequency: interstitialFrequency,
                      uuid: uuid,
                      languageCode: locale,
-                     isPremium: true,
+                     isPremium: isPremium,
                      isTrial: isTrial ?? false,
                      token: token,
-                     logLevel: logLevel,
-                     chatCount: chatCount ?? 5,
-                     freeChatLimit: freeChatLimit ?? 5)
+                     logLevel: logLevel)
     }
 }
