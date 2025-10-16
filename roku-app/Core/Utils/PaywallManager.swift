@@ -316,14 +316,15 @@ class PaywallManager {
         print("PaywallManager: currentVC: \(currentVC)")
         print("PaywallManager: from viewController: \(type(of: viewController))")
         
-        currentVC.dismiss(animated: true) {
-            if shouldNavigateToMain {
-                print("PaywallManager: Navigating to main app")
-                self.navigateToMainApp(from: currentVC)
-            } else {
-                print("PaywallManager: Not navigating to main app")
-            }
+        if shouldNavigateToMain {
+            print("PaywallManager: Navigating to main app directly")
+            navigateToMainApp(from: currentVC)
             completion?()
+        } else {
+            currentVC.dismiss(animated: true) {
+                print("PaywallManager: Not navigating to main app")
+                completion?()
+            }
         }
     }
     
