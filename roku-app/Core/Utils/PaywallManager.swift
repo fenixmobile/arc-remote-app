@@ -335,7 +335,7 @@ class PaywallManager {
         UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
             window.rootViewController = mainTabBarController
         }) { _ in
-            window.makeKeyAndVisible()
+            //window.makeKeyAndVisible()
         }
     }
 }
