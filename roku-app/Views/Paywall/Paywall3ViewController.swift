@@ -16,9 +16,11 @@ class Paywall3ViewController: UIViewController {
     var completion: (()->Void)?
     var fxPaywall: FXPaywall?
     var placementId: String
+    var isOnClosePaywall: Bool = false
     
-    init(placementId: String = "remote") {
+    init(placementId: String = "remote", isOnClosePaywall: Bool = false) {
         self.placementId = placementId
+        self.isOnClosePaywall = isOnClosePaywall
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -31,7 +33,6 @@ class Paywall3ViewController: UIViewController {
     var displayClaimOfferAlert: Bool = false
     var displayOncloseModal: Bool = false
     var displayOnclosePaywallFailure: Bool = false
-    var onClose: (() -> Void)?
     
     //MARK: - UI Elements
     
@@ -90,16 +91,21 @@ class Paywall3ViewController: UIViewController {
     }
     
     func loadPaywallConfiguration() {
-        guard let fxPaywall = fxPaywall else { 
-            print("Paywall3ViewController: fxPaywall is nil, waiting for remote config...")
-            return 
+        guard let paywall = fxPaywall,
+              let remoteConfig = paywall.remoteConfig else {
+            setDefaultValues()
+            return
         }
         
-        if let remoteConfig = fxPaywall.remoteConfig {
-            print("Paywall3ViewController: Remote config loaded, updating UI...")
-            updateUIWithRemoteConfig(remoteConfig: remoteConfig, fxPaywall: fxPaywall)
-        } else {
-            print("Paywall3ViewController: Remote config is nil, waiting...")
+        print("Paywall3ViewController: Remote config loaded, updating UI...")
+        updateUIWithRemoteConfig(remoteConfig: remoteConfig, fxPaywall: paywall)
+    }
+    
+    private func setDefaultValues() {
+        paywall3ModalView.fxPaywall = fxPaywall
+        
+        DispatchQueue.main.async {
+            self.paywall3ModalView.setDefaultValues()
         }
     }
     
@@ -112,12 +118,13 @@ class Paywall3ViewController: UIViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        
+        super.viewWillAppear(animated)
     }
     
     //MARK: - Functions
     
     private func setupPurchaseCompletion() {
+        // Purchase completion handled by Paywall3ModalView
     }
     
     private func setupViews() {
@@ -191,10 +198,96 @@ class Paywall3ViewController: UIViewController {
         paywall3ModalView.loadingActivityIndicatorView.isHidden = true
         paywall3ModalView.loadingActivityIndicatorView.stopAnimating()
         
-        if placementId == "main" {
-            dismiss(animated: true, completion: nil)
+        guard let remoteConfig = fxPaywall?.remoteConfig else {
+            handleNormalClose()
+            return
+        }
+        
+        let displayClaimOfferPrompt = remoteConfig["display_claimOffer_prompt"] as? Bool ?? false
+        let displayOnClosePaywall = remoteConfig["display_onClose_paywall"] as? Bool ?? false
+        
+        if displayClaimOfferPrompt {
+            print("Paywall3ViewController: Showing claim offer modal")
+            showClaimOfferModal()
+        } else if displayOnClosePaywall && placementId != "onclose" {
+            print("Paywall3ViewController: Showing onclose paywall")
+            showOnClosePaywall()
         } else {
-            navigateToMainPage()
+            handleNormalClose()
+        }
+    }
+    
+    private func showClaimOfferModal() {
+        let alert = UIAlertController(
+            title: "Are you sure you want to skip the opportunity for a 3 day free trial?",
+            message: "Enjoy a completely free 3-day trial. If you're not satisfied, you can cancel any time.",
+            preferredStyle: .alert
+        )
+        
+        let notNowAction = UIAlertAction(title: "Not now", style: .default) { _ in
+            print("Paywall3ViewController: User tapped 'Not now' - closing all paywalls")
+            self.handleNormalClose()
+        }
+        
+        let claimOfferAction = UIAlertAction(title: "Claim Offer", style: .default) { _ in
+            print("Paywall3ViewController: User tapped 'Claim Offer' - attempting purchase")
+            self.handleClaimOfferPurchase()
+        }
+        
+        alert.addAction(notNowAction)
+        alert.addAction(claimOfferAction)
+        
+        present(alert, animated: true)
+    }
+    
+    private func handleClaimOfferPurchase() {
+        guard let fxPaywall = fxPaywall,
+              let fxProduct = fxPaywall.products?.first else { return }
+        
+        paywall3ModalView.loadingActivityIndicatorView.startAnimating()
+        paywall3ModalView.loadingActivityIndicatorView.isHidden = false
+        
+        paywall3ModalView.continueButton.isEnabled = false
+        paywall3ModalView.closeButton.isEnabled = false
+        
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.paywall3ModalView.loadingActivityIndicatorView.stopAnimating()
+                self?.paywall3ModalView.loadingActivityIndicatorView.isHidden = true
+                self?.paywall3ModalView.continueButton.isEnabled = true
+                self?.paywall3ModalView.closeButton.isEnabled = true
+                
+                switch result {
+                case .success(let purchaseInfo):
+                    print("Paywall3ViewController: Claim offer purchase successful: \(purchaseInfo)")
+                    SessionDataManager.shared.isPremium = true
+                    self?.handleNormalClose()
+                case .failure(let error):
+                    print("Paywall3ViewController: Claim offer purchase failed: \(error)")
+                    
+                    if let remoteConfig = self?.fxPaywall?.remoteConfig,
+                       let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool,
+                       displayOnClosePaywallFailure {
+                        print("Paywall3ViewController: display_onClose_paywall_failure is true, showing onClose paywall")
+                        self?.showOnClosePaywallAfterFailure()
+                    } else {
+                        self?.handleNormalClose()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func showOnClosePaywallAfterFailure() {
+        PaywallManager.shared.showOnClosePaywallAfterFailure(from: self)
+    }
+    
+    private func handleNormalClose() {
+        print("Paywall3ViewController: Handling normal close for placementId: \(placementId)")
+        if placementId == "onboarding" || placementId == "onclose" {
+            PaywallManager.shared.dismissAllPaywallsAndNavigateToMain(from: self)
+        } else {
+            dismiss(animated: true, completion: nil)
         }
     }
     
@@ -204,10 +297,7 @@ class Paywall3ViewController: UIViewController {
     }
     
     @objc func showOnClosePaywall() {
-        dismiss(animated: true) { [weak self] in
-            guard let self = self else { return }
-            PaywallManager.shared.showPaywall(placement: .onclose, from: self)
-        }
+        PaywallManager.shared.showOnClosePaywall(from: self)
     }
     
     @objc func handlePurchaseCompleted() {
@@ -216,50 +306,11 @@ class Paywall3ViewController: UIViewController {
         if placementId == "main" {
             dismiss(animated: true, completion: nil)
         } else {
-            guard let window = view.window else { return }
-            
-            dismiss(animated: true) {
-                let mainTabBarController = MainTabBarController()
-                UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                    window.rootViewController = mainTabBarController
-                }) { _ in
-                    window.makeKeyAndVisible()
-                }
-            }
+            PaywallManager.shared.dismissAllPaywallsAndNavigateToMain(from: self)
         }
     }
     
     private func navigateToMainPage() {
-        guard let window = view.window else { return }
-        
-        dismiss(animated: true) {
-            let mainTabBarController = MainTabBarController()
-            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                window.rootViewController = mainTabBarController
-            }) { _ in
-                window.makeKeyAndVisible()
-            }
-        }
-    }
-    
-    @objc func nextPage() {
-        if let parentViewController = parent as? PageViewController {
-            parentViewController.showNextPage()
-        } else if let navigationController = navigationController {
-            dismiss(animated: true) {
-                let tabBarVC = MainTabBarController()
-                navigationController.setViewControllers([tabBarVC], animated: false)
-            }
-        } else {
-            dismiss(animated: false) {
-                let tabBarVC = MainTabBarController()
-                
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let window = windowScene.windows.first {
-                    window.rootViewController = UINavigationController(rootViewController: tabBarVC)
-                    window.makeKeyAndVisible()
-                }
-            }
-        }
+        PaywallManager.shared.dismissAllPaywallsAndNavigateToMain(from: self)
     }
 }

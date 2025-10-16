@@ -147,7 +147,7 @@ class Paywall3ModalView: UIView {
         setupViews()
         setupContraints()
         
-        loadPaywallConfiguration()
+        setDefaultValues()
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -242,6 +242,11 @@ class Paywall3ModalView: UIView {
     }
     
     private func loadPaywallConfiguration() {
+    }
+    
+    func setDefaultValues() {
+        titleLabel.text = "Get full access to universal TV REMOTE"
+        continueButton.setTitle("Start Free Trial", for: .normal)
     }
     
     func updateUIWithRemoteConfig(remoteConfig: [String: Any], fxPaywall: FXPaywall) {

@@ -11,6 +11,8 @@ import FXFramework
 class PaywallManager {
     static let shared = PaywallManager()
     
+    private var parentPlacementId: String?
+    
     private init() {}
     
     func showPaywall(placement: PaywallPlacement, from viewController: UIViewController, completion: ((Result<Void, Error>) -> Void)? = nil) {
@@ -36,6 +38,10 @@ class PaywallManager {
         print("PaywallManager: showDynamicPaywall called with placementId: \(placementId)")
         print("PaywallManager: From viewController: \(type(of: viewController))")
         
+        if placementId != "onclose" {
+            parentPlacementId = placementId
+        }
+        
         if placementId == "main" {
             UserDefaultsManager.shared.markMainPaywallShown()
         } else if placementId == "onclose" {
@@ -47,6 +53,7 @@ class PaywallManager {
                 switch result {
                 case .success(let paywall):
                     print("PaywallManager: Paywall loaded successfully: \(paywall.name)")
+                    
                     PaywallHelper.shared.loadProducts(paywall: paywall) { [weak self] productsResult in
                         DispatchQueue.main.async {
                             switch productsResult {
@@ -97,7 +104,7 @@ class PaywallManager {
         } else if paywallName.contains("paywall2") {
             return Paywall2ViewController(placementId: placementId, isOnClosePaywall: isOnClosePaywall)
         } else if paywallName.contains("paywall3") {
-            return Paywall3ViewController(placementId: placementId)
+            return Paywall3ViewController(placementId: placementId, isOnClosePaywall: isOnClosePaywall)
         } else if paywallName.contains("paywall4") {
             return Paywall2ViewController(placementId: placementId, isOnClosePaywall: isOnClosePaywall)
         } else {
@@ -138,6 +145,179 @@ class PaywallManager {
             return Paywall2ViewController(placementId: placementId, isOnClosePaywall: true)
         default:
             return Paywall1ViewController(placementId: placementId)
+        }
+    }
+    
+    func showClaimOfferModal(from viewController: UIViewController, paywall: FXPaywall, placementId: String, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(
+            title: "Are you sure you want to skip the opportunity for a 3 day free trial?",
+            message: "Enjoy a completely free 3-day trial. If you're not satisfied, you can cancel any time.",
+            preferredStyle: .alert
+        )
+        
+        let notNowAction = UIAlertAction(title: "Not now", style: .default) { _ in
+            print("PaywallManager: User tapped 'Not now' - closing all paywalls and navigating to main")
+            self.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
+        }
+        
+        let claimOfferAction = UIAlertAction(title: "Claim Offer", style: .default) { _ in
+            print("PaywallManager: User tapped 'Claim Offer' - attempting purchase")
+            self.handleClaimOfferPurchase(from: viewController, paywall: paywall, placementId: placementId, completion: completion)
+        }
+        
+        alert.addAction(notNowAction)
+        alert.addAction(claimOfferAction)
+        
+        viewController.present(alert, animated: true)
+    }
+    
+    func handleClaimOfferPurchase(from viewController: UIViewController, paywall: FXPaywall, placementId: String, completion: (() -> Void)? = nil) {
+        guard let firstProduct = paywall.products?.first else {
+            print("PaywallManager: No products available for purchase")
+            return
+        }
+        
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: firstProduct) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("PaywallManager: Purchase successful")
+                    SessionDataManager.shared.isPremium = true
+                    self.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
+                case .failure(let error):
+                    print("PaywallManager: Purchase failed: \(error)")
+                    
+                    if let remoteConfig = paywall.remoteConfig,
+                       let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool,
+                       displayOnClosePaywallFailure {
+                        print("PaywallManager: display_onClose_paywall_failure is true, showing onClose paywall")
+                        self.showOnClosePaywallAfterFailure(from: viewController, completion: completion)
+                    } else {
+                        self.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
+                    }
+                }
+            }
+        }
+    }
+    
+    func showOnClosePaywall(from viewController: UIViewController, completion: ((Result<Void, Error>) -> Void)? = nil) {
+        print("PaywallManager: Showing onClose paywall with parentPlacementId: \(parentPlacementId ?? "nil")")
+        
+        PaywallHelper.shared.loadPaywall(placementId: "onclose") { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let paywall):
+                    print("PaywallManager: OnClose paywall loaded successfully: \(paywall.name)")
+                    
+                    PaywallHelper.shared.loadProducts(paywall: paywall) { [weak self] productsResult in
+                        DispatchQueue.main.async {
+                            switch productsResult {
+                            case .success:
+                                print("PaywallManager: Products loaded successfully")
+                                let paywallVC = self?.createDynamicPaywallViewController(for: paywall, placementId: "onclose")
+                                paywallVC?.modalPresentationStyle = .overFullScreen
+                                paywallVC?.modalTransitionStyle = .crossDissolve
+                                
+                                if let paywallVC = paywallVC {
+                                    print("PaywallManager: Presenting onClose paywall: \(type(of: paywallVC))")
+                                    viewController.present(paywallVC, animated: true) {
+                                        completion?(.success(()))
+                                    }
+                                } else {
+                                    print("PaywallManager: Failed to create onClose paywall view controller")
+                                    completion?(.failure(NSError(domain: "PaywallManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create paywall view controller"])))
+                                }
+                            case .failure(let error):
+                                print("PaywallManager: Products yüklenemedi: \(error)")
+                                let fallbackVC = Paywall1ViewController(placementId: "onclose")
+                                fallbackVC.modalPresentationStyle = .overFullScreen
+                                fallbackVC.modalTransitionStyle = .crossDissolve
+                                viewController.present(fallbackVC, animated: true) {
+                                    completion?(.success(()))
+                                }
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    print("PaywallManager: OnClose paywall yüklenemedi: \(error)")
+                    let fallbackVC = Paywall1ViewController(placementId: "onclose")
+                    fallbackVC.modalPresentationStyle = .overFullScreen
+                    fallbackVC.modalTransitionStyle = .crossDissolve
+                    viewController.present(fallbackVC, animated: true) {
+                        completion?(.success(()))
+                    }
+                }
+            }
+        }
+    }
+    
+    func showOnClosePaywallAfterFailure(from viewController: UIViewController, completion: (() -> Void)? = nil) {
+        print("PaywallManager: Showing onClose paywall after purchase failure with parentPlacementId: \(parentPlacementId ?? "nil")")
+        
+        PaywallHelper.shared.loadPaywall(placementId: "onclose") { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let paywall):
+                    print("PaywallManager: OnClose paywall loaded successfully: \(paywall.name)")
+                    
+                    PaywallHelper.shared.loadProducts(paywall: paywall) { [weak self] productsResult in
+                        DispatchQueue.main.async {
+                            switch productsResult {
+                            case .success:
+                                print("PaywallManager: Products loaded successfully")
+                                let paywallVC = self?.createDynamicPaywallViewController(for: paywall, placementId: "onclose")
+                                paywallVC?.modalPresentationStyle = .overFullScreen
+                                paywallVC?.modalTransitionStyle = .crossDissolve
+                                
+                                if let paywallVC = paywallVC {
+                                    print("PaywallManager: Presenting onClose paywall: \(type(of: paywallVC))")
+                                    viewController.present(paywallVC, animated: true) {
+                                        completion?()
+                                    }
+                                } else {
+                                    print("PaywallManager: Failed to create onClose paywall view controller")
+                                }
+                            case .failure(let error):
+                                print("PaywallManager: Products yüklenemedi: \(error)")
+                                let fallbackVC = Paywall1ViewController(placementId: "onclose")
+                                fallbackVC.modalPresentationStyle = .overFullScreen
+                                fallbackVC.modalTransitionStyle = .crossDissolve
+                                viewController.present(fallbackVC, animated: true) {
+                                    completion?()
+                                }
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    print("PaywallManager: OnClose paywall yüklenemedi: \(error)")
+                    let fallbackVC = Paywall1ViewController(placementId: "onclose")
+                    fallbackVC.modalPresentationStyle = .overFullScreen
+                    fallbackVC.modalTransitionStyle = .crossDissolve
+                    viewController.present(fallbackVC, animated: true) {
+                        completion?()
+                    }
+                }
+            }
+        }
+    }
+    
+    func dismissAllPaywallsAndNavigateToMain(from viewController: UIViewController, completion: (() -> Void)? = nil) {
+        var currentVC = viewController
+        
+        while let presentingVC = currentVC.presentingViewController {
+            currentVC = presentingVC
+        }
+        
+        let shouldNavigateToMain = parentPlacementId == "onboarding"
+        print("PaywallManager: parentPlacementId: \(parentPlacementId ?? "nil")")
+        print("PaywallManager: shouldNavigateToMain: \(shouldNavigateToMain)")
+        print("PaywallManager: currentVC: \(currentVC)")
+        
+        currentVC.dismiss(animated: true) {
+            if shouldNavigateToMain {
+                self.navigateToMainApp(from: currentVC)
+            }
+            completion?()
         }
     }
     

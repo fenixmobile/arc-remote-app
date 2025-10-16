@@ -431,14 +431,7 @@ class Paywall2ViewController: UIViewController {
     }
     
     private func showOnClosePaywallAfterFailure() {
-        let presentingVC = presentingViewController
-        dismiss(animated: true) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if let presentingVC = presentingVC {
-                    PaywallManager.shared.showPaywall(placement: .onclose, from: presentingVC)
-                }
-            }
-        }
+        PaywallManager.shared.showOnClosePaywallAfterFailure(from: self)
     }
     
     @objc func closeButtonTapped() {
@@ -449,67 +442,113 @@ class Paywall2ViewController: UIViewController {
         }
 
         print("Paywall2ViewController: Close button tapped")
-        if shouldShowOnClosePaywall() {
-            print("Paywall2ViewController: Should show onclose paywall")
+        
+        guard let remoteConfig = fxPaywall?.remoteConfig else {
+            handleNormalClose()
+            return
+        }
+        
+        let displayClaimOfferPrompt = remoteConfig["display_claimOffer_prompt"] as? Bool ?? false
+        let displayOnClosePaywall = remoteConfig["display_onClose_paywall"] as? Bool ?? false
+        
+        if displayClaimOfferPrompt {
+            print("Paywall2ViewController: Showing claim offer modal")
+            showClaimOfferModal()
+        } else if displayOnClosePaywall && !isOnClosePaywall {
+            print("Paywall2ViewController: Showing onclose paywall")
             showOnClosePaywall()
         } else {
-            print("Paywall2ViewController: Normal dismiss")
-            if placementId == "onboarding" {
-                navigateToMainPage()
-            } else {
-                dismiss(animated: true, completion: nil)
-            }
+            handleNormalClose()
         }
     }
     
-    private func navigateToMainPage() {
-        guard let window = view.window else { return }
+    private func showClaimOfferModal() {
+        let alert = UIAlertController(
+            title: "Are you sure you want to skip the opportunity for a 3 day free trial?",
+            message: "Enjoy a completely free 3-day trial. If you're not satisfied, you can cancel any time.",
+            preferredStyle: .alert
+        )
         
-        dismiss(animated: true) {
-            let mainTabBarController = MainTabBarController()
-            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                window.rootViewController = mainTabBarController
-            }) { _ in
-                window.makeKeyAndVisible()
-            }
+        let notNowAction = UIAlertAction(title: "Not now", style: .default) { _ in
+            print("Paywall2ViewController: User tapped 'Not now' - closing all paywalls")
+            self.handleNormalClose()
         }
+        
+        let claimOfferAction = UIAlertAction(title: "Claim Offer", style: .default) { _ in
+            print("Paywall2ViewController: User tapped 'Claim Offer' - attempting purchase")
+            self.handleClaimOfferPurchase()
+        }
+        
+        alert.addAction(notNowAction)
+        alert.addAction(claimOfferAction)
+        
+        present(alert, animated: true)
     }
     
-    private func shouldShowOnClosePaywall() -> Bool {
-        print("Paywall2ViewController: shouldShowOnClosePaywall - isOnClosePaywall = \(isOnClosePaywall)")
+    private func handleClaimOfferPurchase() {
+        guard let fxPaywall = fxPaywall,
+              let fxProduct = fxPaywall.products?.first else { return }
         
-        if isOnClosePaywall {
-            print("Paywall2ViewController: This is already an onclose paywall, not showing another onclose paywall")
-            return false
-        }
+        loadingActivityIndicatorView.startAnimating()
+        loadingActivityIndicatorView.isHidden = false
         
-        guard let remoteConfig = fxPaywall?.remoteConfig,
-              let displayOnClose = remoteConfig["display_onClose_paywall"] as? Bool else {
-            print("Paywall2ViewController: No remote config or display_onClose_paywall not found")
-            return false
-        }
-        print("Paywall2ViewController: display_onClose_paywall = \(displayOnClose)")
-        return displayOnClose
-    }
-    
-    private func showOnClosePaywall() {
-        print("Paywall2ViewController: Showing onclose paywall")
+        continueButton.isEnabled = false
+        closeButton.isEnabled = false
         
-        dismiss(animated: true) { [weak self] in
-            PaywallManager.shared.showPaywall(placement: .onclose, from: self?.presentingViewController ?? UIApplication.shared.windows.first?.rootViewController ?? UIViewController()) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        print("Paywall2ViewController: Onclose paywall shown successfully")
-                    case .failure(let error):
-                        print("Paywall2ViewController: Failed to show onclose paywall: \(error)")
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.loadingActivityIndicatorView.stopAnimating()
+                self?.loadingActivityIndicatorView.isHidden = true
+                self?.continueButton.isEnabled = true
+                self?.closeButton.isEnabled = true
+                
+                switch result {
+                case .success(let purchaseInfo):
+                    print("Paywall2ViewController: Claim offer purchase successful: \(purchaseInfo)")
+                    SessionDataManager.shared.isPremium = true
+                    self?.handleNormalClose()
+                case .failure(let error):
+                    print("Paywall2ViewController: Claim offer purchase failed: \(error)")
+                    
+                    if let remoteConfig = self?.fxPaywall?.remoteConfig,
+                       let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool,
+                       displayOnClosePaywallFailure {
+                        print("Paywall2ViewController: display_onClose_paywall_failure is true, showing onClose paywall")
+                        self?.showOnClosePaywallAfterFailure()
+                    } else {
+                        self?.handleNormalClose()
                     }
                 }
             }
         }
     }
     
+    private func showOnClosePaywall() {
+        print("Paywall2ViewController: Showing onclose paywall")
+        
+        PaywallManager.shared.showOnClosePaywall(from: self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Paywall2ViewController: Onclose paywall shown successfully")
+                case .failure(let error):
+                    print("Paywall2ViewController: Failed to show onclose paywall: \(error)")
+                }
+            }
+        }
+    }
     
+    private func handleNormalClose() {
+        if placementId == "onboarding" || placementId == "onclose" {
+            PaywallManager.shared.dismissAllPaywallsAndNavigateToMain(from: self)
+        } else {
+            dismiss(animated: true, completion: nil)
+        }
+    }
+    
+    private func navigateToMainPage() {
+        PaywallManager.shared.dismissAllPaywallsAndNavigateToMain(from: self)
+    }
     
     @objc func termOfUseLabelTapped() {
         AnalyticsManager.shared.fxAnalytics.send(event: "paywall_terms_tap")
