@@ -202,6 +202,7 @@ class PaywallManager {
     
     func showOnClosePaywall(from viewController: UIViewController, completion: ((Result<Void, Error>) -> Void)? = nil) {
         print("PaywallManager: Showing onClose paywall with parentPlacementId: \(parentPlacementId ?? "nil")")
+        print("PaywallManager: Current parentPlacementId before onclose: \(parentPlacementId ?? "nil")")
         
         PaywallHelper.shared.loadPaywall(placementId: "onclose") { [weak self] result in
             DispatchQueue.main.async {
@@ -309,13 +310,18 @@ class PaywallManager {
         }
         
         let shouldNavigateToMain = parentPlacementId == "onboarding"
+        print("PaywallManager: dismissAllPaywallsAndNavigateToMain called")
         print("PaywallManager: parentPlacementId: \(parentPlacementId ?? "nil")")
         print("PaywallManager: shouldNavigateToMain: \(shouldNavigateToMain)")
         print("PaywallManager: currentVC: \(currentVC)")
+        print("PaywallManager: from viewController: \(type(of: viewController))")
         
         currentVC.dismiss(animated: true) {
             if shouldNavigateToMain {
+                print("PaywallManager: Navigating to main app")
                 self.navigateToMainApp(from: currentVC)
+            } else {
+                print("PaywallManager: Not navigating to main app")
             }
             completion?()
         }
