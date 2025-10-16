@@ -9,9 +9,7 @@ import Foundation
 import Combine
 
 class TVRemoteViewModel: ObservableObject {
-    @Published var connectedDevices: [TVDevice] = []
     @Published var discoveredDevices: [TVDevice] = []
-    @Published var currentDevice: TVDevice?
     @Published var isConnecting: Bool = false
     @Published var isDiscovering: Bool = false
     @Published var discoveryMessage: String = ""
@@ -28,24 +26,9 @@ class TVRemoteViewModel: ObservableObject {
     
     private func setupBindings() {
         // Bind TVServiceManager's published properties to ViewModel
-        tvServiceManager.$connectedDevices
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.connectedDevices, on: self)
-            .store(in: &cancellables)
-        
         tvServiceManager.$discoveredDevices
             .receive(on: DispatchQueue.main)
             .assign(to: \.discoveredDevices, on: self)
-            .store(in: &cancellables)
-        
-        tvServiceManager.$currentDevice
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] device in
-                print("🔗 TVRemoteViewModel: currentDevice değişti - \(device?.displayName ?? "nil")")
-                print("🔗 TVRemoteViewModel: currentDevice önceki değer: \(self?.currentDevice?.displayName ?? "nil")")
-                self?.currentDevice = device
-                print("🔗 TVRemoteViewModel: currentDevice yeni değer: \(self?.currentDevice?.displayName ?? "nil")")
-            }
             .store(in: &cancellables)
         
         tvServiceManager.$isDiscovering
@@ -116,9 +99,9 @@ class TVRemoteViewModel: ObservableObject {
     
     func sendCommand(_ command: String, parameters: [String: Any]? = nil) {
         print("🎮 TVRemoteViewModel: sendCommand çağrıldı - \(command)")
-        print("🎮 TVRemoteViewModel: currentDevice = \(currentDevice?.name ?? "nil")")
+        print("🎮 TVRemoteViewModel: currentDevice = \(tvServiceManager.currentDevice?.name ?? "nil")")
         
-        guard let device = currentDevice else {
+        guard let device = tvServiceManager.currentDevice else {
             print("❌ TVRemoteViewModel: currentDevice nil!")
             errorMessage = "No device connected"
             showError = true
@@ -220,7 +203,7 @@ class TVRemoteViewModel: ObservableObject {
     }
     
     func getCommandsForCurrentDevice() -> [String: String] {
-        guard let device = currentDevice else { return [:] }
+        guard let device = tvServiceManager.currentDevice else { return [:] }
         
         switch device.brand {
         case .roku, .tcl:

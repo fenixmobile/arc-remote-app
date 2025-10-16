@@ -100,7 +100,10 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         setTvServiceStateListener()
-        TVServiceManager.shared.connectToStoredDevice()
+        
+        if TVServiceManager.shared.currentDevice == nil {
+            TVServiceManager.shared.connectToStoredDevice()
+        }
     }
     
     private func setupViews() {
@@ -116,7 +119,6 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     
     private func setupConstraints() {
         let safeArea = view.safeAreaLayoutGuide
-        RemoteUIManager.shared.setupConstraints(safeArea: safeArea, startLayoutMarginGuide: remoteButtonsView.layoutMarginsGuide)
         NSLayoutConstraint.activate([
             cast.topAnchor.constraint(equalTo: safeArea.topAnchor, constant: Constants.topMargin),
             cast.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Constants.horizontalMargin),
@@ -150,31 +152,48 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     }
     
     private func setupBindings() {
-        viewModel.$currentDevice
+        TVServiceManager.shared.$currentDevice
             .receive(on: DispatchQueue.main)
             .sink { [weak self] device in
+                guard let self = self else { return }
+                
+                print("lastDevice: \(TVServiceManager.shared.lastConnectedDevice)")
+                print("device: \(device)")
+                if TVServiceManager.shared.lastConnectedDevice?.id == device?.id {
+                    print("🔗 TVRemoteViewController: Aynı cihaz, güncelleme atlanıyor")
+                    return
+                }
+                TVServiceManager.shared.lastConnectedDevice = device
+                
                 print("🔗 TVRemoteViewController: currentDevice değişti - \(device?.displayName ?? "nil")")
-                self?.updateConnectionStatus(device)
+                self.updateConnectionStatus(device)
             }
             .store(in: &cancellables)
     }
     
     private func updateConnectionStatus(_ device: TVDevice?) {
-        if let device = device {
-            connectionStatusLabel.text = device.displayName
-            status.image = UIImage(named: "connected")
-            print("✅ TVRemoteViewController: Bağlantı durumu güncellendi - \(device.displayName)")
-        } else {
-            connectionStatusLabel.text = "Not Connected"
-            status.image = UIImage(named: "not.connected")
-            print("❌ TVRemoteViewController: Bağlantı durumu - Not Connected")
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            if let device = device {
+                self.connectionStatusLabel.text = device.displayName
+                self.status.image = UIImage(named: "connected")
+                print("✅ TVRemoteViewController: Bağlantı durumu güncellendi - \(device.displayName)")
+            } else {
+                self.connectionStatusLabel.text = "Not Connected"
+                self.status.image = UIImage(named: "not.connected")
+                print("❌ TVRemoteViewController: Bağlantı durumu - Not Connected")
+            }
+            setupDefaultUI()
         }
     }
     
     private func setupDefaultUI() {
         RemoteUIManager.shared.setupMainStackView(view: remoteButtonsView)
         RemoteUIManager.shared.setupDefaultViews(view: remoteButtonsView)
-        RemoteUIManager.shared.setupConstraints(safeArea: remoteButtonsView.safeAreaLayoutGuide, startLayoutMarginGuide: remoteButtonsView.layoutMarginsGuide)
+        
+        let safeArea = view.safeAreaLayoutGuide
+        RemoteUIManager.shared.setupConstraints(safeArea: safeArea, startLayoutMarginGuide: remoteButtonsView.layoutMarginsGuide)
         
         RemoteUIManager.shared.allRemoteButtons.forEach { button in
             button.addTarget(RemoteUIManager.shared, action: #selector(RemoteUIManager.buttonAction), for: .touchUpInside)
@@ -240,7 +259,7 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     
     
     func sendTVRemoteEvent(_ event: TVRemoteEvent) {
-        guard let device = viewModel.currentDevice else { return }
+        guard let device = TVServiceManager.shared.currentDevice else { return }
         Task {
             do {
                 let command = mapEventToCommand(event)
@@ -263,7 +282,7 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     
     @objc func menuButtonAction() {
         AnalyticsManager.shared.fxAnalytics.send(event: "main_home_tap")
-        if viewModel.currentDevice != nil {
+        if TVServiceManager.shared.currentDevice != nil {
             showDisconnectActionSheet()
         } else {
             showDeviceList()
@@ -271,7 +290,7 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     }
     
     private func showDisconnectActionSheet() {
-        let actionSheet = UIAlertController(title: "Connected to \(viewModel.currentDevice?.name ?? "")", message: nil, preferredStyle: .actionSheet)
+        let actionSheet = UIAlertController(title: "Connected to \(TVServiceManager.shared.currentDevice?.name ?? "")", message: nil, preferredStyle: .actionSheet)
         
         let disconnectAction = UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
             AnalyticsManager.shared.fxAnalytics.send(event: "device_disconnect")
@@ -287,7 +306,7 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     }
     
     private func disconnectDevice() {
-        guard let device = viewModel.currentDevice else { return }
+        guard let device = TVServiceManager.shared.currentDevice else { return }
         TVServiceManager.shared.disconnectFromDevice(device)
         connectionStatusLabel.text = "Not Connected"
         status.image = UIImage(named: "not.connected")

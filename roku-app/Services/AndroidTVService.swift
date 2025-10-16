@@ -22,6 +22,10 @@ class AndroidTVService: BaseTVService, URLSessionTaskDelegate {
         
         do {
             try await startPairing()
+            isPaired = true
+            isConnected = true
+            print("🔐 AndroidTVService: Bağlantı başarılı, isPaired = true yapıldı")
+            delegate?.tvService(self, didConnect: device)
         } catch {
             isConnected = false
             delegate?.tvService(self, didReceiveError: error)
@@ -57,6 +61,10 @@ class AndroidTVService: BaseTVService, URLSessionTaskDelegate {
     override func testConnection() async throws -> Bool {
         guard !device.id.uuidString.isEmpty else { return false }
         
+        if isPaired {
+            return true
+        }
+        
         do {
             try await startPairing()
             return true
@@ -73,14 +81,26 @@ class AndroidTVService: BaseTVService, URLSessionTaskDelegate {
     
     private var isPaired: Bool {
         get {
-            return UserDefaults.standard.bool(forKey: "isPairedAndroid\(device.id)")
+            let key = "isPairedAndroid\(device.id)"
+            let paired = UserDefaults.standard.bool(forKey: key)
+            print("🔐 AndroidTVService: isPaired kontrolü - Key: \(key), Paired: \(paired)")
+            return paired
         }
         set {
-            UserDefaults.standard.setValue(newValue, forKey: "isPairedAndroid\(device.id)")
+            let key = "isPairedAndroid\(device.id)"
+            UserDefaults.standard.setValue(newValue, forKey: key)
+            print("🔐 AndroidTVService: isPaired güncellendi - Key: \(key), Paired: \(newValue)")
         }
     }
     
     private func startPairing() async throws {
+        print("🔐 AndroidTVService: startPairing çağrıldı - Device: \(device.displayName), isPaired: \(isPaired)")
+        if isPaired {
+            print("🔐 AndroidTVService: Cihaz zaten eşleşmiş, pairing atlanıyor")
+            return
+        }
+        
+        print("🔐 AndroidTVService: Yeni cihaz için pairing başlatılıyor")
         streamTask = urlSession.streamTask(withHostName: device.ipAddress, port: 6467)
         if let streamTask = streamTask {
             streamTask.startSecureConnection()

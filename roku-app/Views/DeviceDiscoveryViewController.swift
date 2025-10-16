@@ -59,10 +59,10 @@ class DeviceDiscoveryViewController: UIViewController {
         
         requestLocalNetworkPermissionIfNeeded { [weak self] in
             DispatchQueue.main.async {
-                print("🔍 Permission request completed, starting discovery...")
+                print("🔍 Permission request completed, starting incremental discovery...")
                 if self?.viewModel.discoveredDevices.isEmpty == true {
                     self?.isAutoDiscovery = true
-                    self?.startDiscovery()
+                    self?.startIncrementalDiscovery()
                 }
             }
         }
@@ -263,6 +263,24 @@ class DeviceDiscoveryViewController: UIViewController {
                 
                 if self?.viewModel.isDiscovering == true {
                     self?.updateSearchAnimationForCurrentDeviceCount()
+                }
+            }
+            .store(in: &cancellables)
+        
+        TVServiceManager.shared.$currentDevice
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    self?.tableView.reloadData()
+                }
+            }
+            .store(in: &cancellables)
+        
+        TVServiceManager.shared.$currentDevice
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    self?.tableView.reloadData()
                 }
             }
             .store(in: &cancellables)
@@ -799,8 +817,7 @@ class DeviceTableViewCell: UITableViewCell {
         deviceIconImageView.image = UIImage(named: iconName) ?? UIImage(systemName: "tv")
         deviceIconImageView.tintColor = deviceIconImageView.image == UIImage(systemName: "tv") ? device.brand.tintColor : .white
         
-        let isConnected = TVServiceManager.shared.currentDevice?.id == device.id || 
-                         TVServiceManager.shared.connectedDeviceIds.contains(device.id) ||
+        let isConnected = TVServiceManager.shared.currentDevice?.id == device.id ||
                          (TVServiceManager.shared.currentDevice?.ipAddress == device.ipAddress && 
                           TVServiceManager.shared.currentDevice?.port == device.port)
         

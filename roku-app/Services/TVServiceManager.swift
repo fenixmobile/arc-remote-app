@@ -6,12 +6,11 @@ import XMLCoder
 class TVServiceManager: ObservableObject {
     static let shared = TVServiceManager()
 
-    @Published var connectedDevices: [TVDevice] = []
     @Published var discoveredDevices: [TVDevice] = []
     @Published var currentDevice: TVDevice?
+    @Published var lastConnectedDevice: TVDevice?
     @Published var isDiscovering: Bool = false
     @Published var discoveryMessage: String = ""
-    @Published var connectedDeviceIds: Set<UUID> = []
 
     private let networkMonitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")
@@ -128,7 +127,6 @@ class TVServiceManager: ObservableObject {
             }
             
             currentService = service
-            connectedDeviceIds.insert(device.id)
             print("🔗 Current service saklandı: \(device.id)")
             
             AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_success", properties: [
@@ -147,15 +145,6 @@ class TVServiceManager: ObservableObject {
         }
 
         let finalDevice = device
-        DispatchQueue.main.async {
-            print("🔗 TVServiceManager: currentDevice güncelleniyor: \(finalDevice.displayName) - \(finalDevice.brand)")
-            print("🔗 TVServiceManager: currentDevice önceki değer: \(self.currentDevice?.displayName ?? "nil")")
-            self.currentDevice = finalDevice
-            print("🔗 TVServiceManager: currentDevice yeni değer: \(self.currentDevice?.displayName ?? "nil")")
-            if !self.connectedDevices.contains(where: { $0.id == finalDevice.id }) {
-                self.connectedDevices.append(finalDevice)
-            }
-        }
     }
     
     func connectToSamsungTVWithPin(_ device: inout TVDevice, pin: String) async throws {
@@ -173,10 +162,12 @@ class TVServiceManager: ObservableObject {
             
             let finalDevice = device
             DispatchQueue.main.async {
-                self.currentDevice = finalDevice
-                if !self.connectedDevices.contains(where: { $0.id == finalDevice.id }) {
-                    self.connectedDevices.append(finalDevice)
+                if self.currentDevice?.id == finalDevice.id {
+                    print("🔗 TVServiceManager: Aynı cihaz, güncelleme atlanıyor: \(finalDevice.displayName)")
+                    return
                 }
+                
+                self.currentDevice = finalDevice
             }
         } catch {
             AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_pin_ok_failure", properties: [
@@ -197,14 +188,12 @@ class TVServiceManager: ObservableObject {
 
         DispatchQueue.main.async {
             self.currentDevice = nil
-            self.connectedDevices.removeAll(where: { $0.id == device.id })
-            self.connectedDeviceIds.remove(device.id)
             self.currentService = nil
         }
     }
 
     func isDeviceConnected(_ device: TVDevice) -> Bool {
-        return connectedDevices.contains(where: { $0.id == device.id })
+        return currentDevice?.id == device.id
     }
     
     func discoverAndroidTVDevices() async throws -> [TVDevice] {
@@ -430,14 +419,18 @@ extension TVServiceManager: TVServiceDelegate {
         print("🔗 TVServiceManager: Current service güncellendi: \(device.displayName)")
         
         DispatchQueue.main.async {
+            if self.currentDevice?.id == device.id {
+                print("🔗 TVServiceManager: tvService didConnect - Aynı cihaz, güncelleme atlanıyor: \(device.displayName)")
+                return
+            }
+            
             print("🔗 TVServiceManager: currentDevice güncelleniyor: \(device.displayName) - \(device.brand)")
             print("🔗 TVServiceManager: currentDevice önceki değer: \(self.currentDevice?.displayName ?? "nil")")
+            let previousDevice = self.currentDevice
             self.currentDevice = device
+            self.lastConnectedDevice = previousDevice
             print("🔗 TVServiceManager: currentDevice yeni değer: \(self.currentDevice?.displayName ?? "nil")")
-            
-            if !self.connectedDevices.contains(where: { $0.id == device.id }) {
-                self.connectedDevices.append(device)
-            }
+            print("🔗 TVServiceManager: lastConnectedDevice set edildi: \(self.lastConnectedDevice?.displayName ?? "nil")")
         }
     }
     
@@ -446,7 +439,6 @@ extension TVServiceManager: TVServiceDelegate {
         
         DispatchQueue.main.async {
             self.currentDevice = nil
-            self.connectedDevices.removeAll { $0.id == device.id }
         }
     }
     
