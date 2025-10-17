@@ -43,10 +43,10 @@ class SettingsProTableViewCell: UITableViewCell {
     
     private func setupConstraints() {
         NSLayoutConstraint.activate([
-            getProImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            getProImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
-            getProImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            getProImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            getProImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 0),
+            getProImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -0),
+            getProImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 0),
+            getProImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -0),
         ])
     }
     
