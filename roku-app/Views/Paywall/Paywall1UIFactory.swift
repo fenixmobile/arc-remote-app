@@ -24,7 +24,7 @@ class Paywall1UIFactory {
         label.textAlignment = .center
         label.numberOfLines = 1
         label.backgroundColor = UIColor(named: "primary")?.withAlphaComponent(0.5)
-        label.text = "Upgrade to Pro"
+        label.text = ""
         label.font = UIFont(name: "Poppins-SemiBold", size: 22)
         return label
     }

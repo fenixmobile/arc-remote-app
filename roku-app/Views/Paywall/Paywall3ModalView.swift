@@ -247,6 +247,10 @@ class Paywall3ModalView: UIView {
     func setDefaultValues() {
         titleLabel.text = "Get full access to universal TV REMOTE"
         continueButton.setTitle("Start Free Trial", for: .normal)
+        
+        if !products.isEmpty {
+            products[0].selected = true
+        }
     }
     
     func updateUIWithRemoteConfig(remoteConfig: [String: Any], fxPaywall: FXPaywall) {

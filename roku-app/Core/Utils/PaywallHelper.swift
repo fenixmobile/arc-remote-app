@@ -79,8 +79,16 @@ class PaywallHelper {
     }
     
     func purchaseProduct(placementId: String, product: FXProduct, completion: @escaping (Result<FXPurchaseInfo, Error>) -> Void) {
+        DispatchQueue.main.async {
+            if let topViewController = UIApplication.shared.windows.first?.rootViewController?.topMostViewController() {
+                self.showLoadingIndicator(on: topViewController)
+            }
+        }
+        
         fxPurchase?.startPurchase(with: product) { result in
             DispatchQueue.main.async {
+                self.hideLoadingIndicator()
+                
                 switch result {
                 case .success(let purchaseInfo):
                     if let premium = purchaseInfo.info["premium"] as? Bool, premium == true {
@@ -122,6 +130,51 @@ class PaywallHelper {
     
     func clearAllCache() {
         cacheManager.clearAllCache()
+    }
+    
+    private var loadingIndicator: UIActivityIndicatorView?
+    private var loadingOverlay: UIView?
+    
+    private func showLoadingIndicator(on viewController: UIViewController) {
+        hideLoadingIndicator()
+        
+        let overlay = UIView()
+        overlay.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.isUserInteractionEnabled = true
+        
+        let indicator = UIActivityIndicatorView(style: .large)
+        indicator.color = .white
+        indicator.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        indicator.layer.cornerRadius = 10
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        
+        viewController.view.addSubview(overlay)
+        overlay.addSubview(indicator)
+        
+        NSLayoutConstraint.activate([
+            overlay.topAnchor.constraint(equalTo: viewController.view.topAnchor),
+            overlay.leadingAnchor.constraint(equalTo: viewController.view.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor),
+            overlay.bottomAnchor.constraint(equalTo: viewController.view.bottomAnchor),
+            
+            indicator.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            indicator.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            indicator.widthAnchor.constraint(equalToConstant: 80),
+            indicator.heightAnchor.constraint(equalToConstant: 80)
+        ])
+        
+        indicator.startAnimating()
+        loadingIndicator = indicator
+        loadingOverlay = overlay
+    }
+    
+    private func hideLoadingIndicator() {
+        loadingIndicator?.stopAnimating()
+        loadingIndicator?.removeFromSuperview()
+        loadingOverlay?.removeFromSuperview()
+        loadingIndicator = nil
+        loadingOverlay = nil
     }
 }
 

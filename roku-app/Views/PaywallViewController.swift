@@ -36,7 +36,7 @@ class PaywallViewController: UIViewController {
     
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Upgrade to Pro"
+        label.text = ""
         label.font = UIFont(name: "Poppins-Bold", size: 24) ?? UIFont.systemFont(ofSize: 24, weight: .bold)
         label.textColor = .white
         label.textAlignment = .center

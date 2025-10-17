@@ -76,7 +76,7 @@ class Paywall2ViewController: UIViewController {
         label.font = UIFont(name: "Poppins-Bold", size: 26)
         label.textColor = UIColor(named: "title")
         label.numberOfLines = 0
-        label.text = "Upgrade to Pro"
+        label.text = ""
         label.textAlignment = .center
         label.alpha = 0.2
         label.adjustsFontSizeToFitWidth = true

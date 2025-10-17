@@ -312,17 +312,25 @@ class PaywallManager {
     func handlePurchaseButtonTapped(from viewController: UIViewController, placementId: String, fxPaywall: FXPaywall, products: [Product], completion: (() -> Void)? = nil) {
         AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
 
-        guard let selectedProduct = products.first(where: {$0.selected }),
-              let fxProduct = fxPaywall.products?.first(where: { $0.productId == selectedProduct.identifier }) else { 
-            print("PaywallManager: No selected product or paywall available")
-            return 
+        guard let fxProducts = fxPaywall.products, !fxProducts.isEmpty else {
+            print("PaywallManager: No fxPaywall products available")
+            return
         }
         
-        print("PaywallManager: Attempting to purchase product: \(fxProduct.productId)")
-        print("PaywallManager: Selected product details: \(selectedProduct)")
+        let selectedFxProduct: FXProduct
+        if let selectedProduct = products.first(where: { $0.selected }) {
+            selectedFxProduct = fxProducts.first(where: { $0.productId == selectedProduct.identifier }) ?? fxProducts.first!
+            print("PaywallManager: Using user selected product: \(selectedProduct.identifier)")
+        } else {
+            selectedFxProduct = fxProducts.first!
+            print("PaywallManager: No product selected, using first product: \(selectedFxProduct.productId)")
+        }
         
-        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
+        print("PaywallManager: Attempting to purchase product: \(selectedFxProduct.productId)")
+        
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: selectedFxProduct) { [weak self] result in
             DispatchQueue.main.async {
+                
                 switch result {
                 case .success(let purchaseInfo):
                     print("PaywallManager: Purchase successful: \(purchaseInfo)")
