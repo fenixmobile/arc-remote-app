@@ -1785,6 +1785,8 @@ class RemoteUIManager {
         guard let topViewController = UIApplication.shared.windows.first?.rootViewController?.topMostViewController() else { return }
         let deviceDiscoveryVC = DeviceDiscoveryViewController()
         let navController = UINavigationController(rootViewController: deviceDiscoveryVC)
+        navController.modalPresentationStyle = .fullScreen
+        navController.isModalInPresentation = true
         topViewController.present(navController, animated: true)
     }
 }

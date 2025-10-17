@@ -316,6 +316,7 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
         let deviceListVC = DeviceDiscoveryViewController()
         let navigationController = UINavigationController(rootViewController: deviceListVC)
         navigationController.modalPresentationStyle = .fullScreen
+        navigationController.isModalInPresentation = true
         present(navigationController, animated: true, completion: nil)
     }
 }
