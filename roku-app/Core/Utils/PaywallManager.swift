@@ -112,23 +112,6 @@ class PaywallManager {
         }
     }
     
-    private func createPaywallViewController(for placement: PaywallPlacement) -> UIViewController {
-        switch placement {
-        case .onboarding:
-            return Paywall1ViewController(placementId: placement.rawValue)
-        case .settings:
-            return Paywall2ViewController(placementId: placement.rawValue)
-        case .remote:
-            return Paywall3ViewController(placementId: placement.rawValue)
-        case .premium:
-            return Paywall1ViewController(placementId: placement.rawValue)
-        case .main:
-            return Paywall2ViewController(placementId: placement.rawValue)
-        case .onclose:
-            return Paywall2ViewController(placementId: placement.rawValue, isOnClosePaywall: true)
-        }
-    }
-    
     private func createPaywallViewController(for placementId: String) -> UIViewController {
         switch placementId {
         case PaywallPlacement.onboarding.rawValue:
@@ -137,8 +120,6 @@ class PaywallManager {
             return Paywall2ViewController(placementId: placementId)
         case PaywallPlacement.remote.rawValue:
             return Paywall3ViewController(placementId: placementId)
-        case PaywallPlacement.premium.rawValue:
-            return Paywall1ViewController(placementId: placementId)
         case PaywallPlacement.main.rawValue:
             return Paywall2ViewController(placementId: placementId)
         case PaywallPlacement.onclose.rawValue:
@@ -326,6 +307,44 @@ class PaywallManager {
                 completion?()
             }
         }
+    }
+    
+    func handlePurchaseButtonTapped(from viewController: UIViewController, placementId: String, fxPaywall: FXPaywall, products: [Product], completion: (() -> Void)? = nil) {
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
+
+        guard let selectedProduct = products.first(where: {$0.selected }),
+              let fxProduct = fxPaywall.products?.first(where: { $0.productId == selectedProduct.identifier }) else { 
+            print("PaywallManager: No selected product or paywall available")
+            return 
+        }
+        
+        print("PaywallManager: Attempting to purchase product: \(fxProduct.productId)")
+        print("PaywallManager: Selected product details: \(selectedProduct)")
+        
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let purchaseInfo):
+                    print("PaywallManager: Purchase successful: \(purchaseInfo)")
+                    SessionDataManager.shared.isPremium = true
+                    self?.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
+                case .failure(let error):
+                    print("PaywallManager: Purchase failed: \(error)")
+                    self?.handlePurchaseFailure(from: viewController, error: error, fxPaywall: fxPaywall, completion: completion)
+                }
+            }
+        }
+    }
+    
+    private func handlePurchaseFailure(from viewController: UIViewController, error: Error, fxPaywall: FXPaywall, completion: (() -> Void)? = nil) {
+        guard let remoteConfig = fxPaywall.remoteConfig,
+              let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool,
+              displayOnClosePaywallFailure else {
+            dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
+            return
+        }
+        
+        showOnClosePaywallAfterFailure(from: viewController, completion: completion)
     }
     
     func navigateToMainApp(from viewController: UIViewController) {

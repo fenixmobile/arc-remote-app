@@ -62,8 +62,8 @@ class SettingsTableViewCell: UITableViewCell {
             
             itemArrow.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             itemArrow.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            itemArrow.widthAnchor.constraint(equalToConstant: 24),
-            itemArrow.heightAnchor.constraint(equalToConstant: 24),
+            itemArrow.widthAnchor.constraint(equalToConstant: 20),
+            itemArrow.heightAnchor.constraint(equalToConstant: 20),
         ])
     }
 

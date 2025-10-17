@@ -47,7 +47,7 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     
     lazy var startFreeTrialButton: UIButton = {
         let button = Paywall1UIFactory.createPurchaseButton()
-        button.addTarget(self, action: #selector(startFreeTrialButtonTapped), for: .touchUpInside)
+        button.addTarget(self, action: #selector(purchaseButtonTapped), for: .touchUpInside)
         return button
     }()
     
@@ -300,36 +300,13 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     
     // MARK: - OBJC Functions
     
-    @objc func startFreeTrialButtonTapped() {
-        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
-
-        guard let selectedProduct = products.first(where: {$0.selected }),
-              let fxPaywall = fxPaywall,
-              let fxProduct = fxPaywall.products?.first else { return }
-        
-        loadingActivityIndicatorView.startAnimating()
-        loadingActivityIndicatorView.isHidden = false
-        
-        startFreeTrialButton.isEnabled = false
-        closeButton.isEnabled = false
-        
-        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.loadingActivityIndicatorView.stopAnimating()
-                self?.loadingActivityIndicatorView.isHidden = true
-                self?.startFreeTrialButton.isEnabled = true
-                self?.closeButton.isEnabled = true
-                
-                switch result {
-                case .success(let purchaseInfo):
-                    print("Paywall1ViewController: Purchase successful: \(purchaseInfo)")
-                    self?.handlePurchaseSuccess()
-                case .failure(let error):
-                    print("Paywall1ViewController: Purchase failed: \(error)")
-                    self?.handlePurchaseFailure(error: error)
-                }
-            }
-        }
+    @objc func purchaseButtonTapped() {
+        PaywallManager.shared.handlePurchaseButtonTapped(
+            from: self,
+            placementId: placementId,
+            fxPaywall: fxPaywall!,
+            products: products
+        )
     }
     
     private func handlePurchaseSuccess() {
@@ -345,7 +322,7 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
                 UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
                     window.rootViewController = mainTabBarController
                 }) { _ in
-                    window.makeKeyAndVisible()
+                    //window.makeKeyAndVisible()
                 }
             }
         }
@@ -554,7 +531,7 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
                 UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
                     window.rootViewController = mainTabBarController
                 }) { _ in
-                    window.makeKeyAndVisible()
+                    //window.makeKeyAndVisible()
                 }
             }
         }

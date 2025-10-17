@@ -17,6 +17,7 @@ class Paywall2ViewController: UIViewController {
     var fxPaywall: FXPaywall?
     var placementId: String
     var isOnClosePaywall: Bool = false
+    var products: [Product] = []
     
     init(placementId: String = "settings", isOnClosePaywall: Bool = false) {
         self.placementId = placementId
@@ -101,7 +102,7 @@ class Paywall2ViewController: UIViewController {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.backgroundColor = UIColor(named: "button")
         button.layer.cornerRadius = 25
-        button.addTarget(self, action: #selector(continueButtonTapped), for: .touchUpInside)
+        button.addTarget(self, action: #selector(purchaseButtonTapped), for: .touchUpInside)
         return button
     }()
     
@@ -348,16 +349,13 @@ class Paywall2ViewController: UIViewController {
     
     //MARK: - OBJC Functions
     
-    @objc func continueButtonTapped() {
-        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
-
-        guard let fxProduct = fxPaywall?.products?.first,
-              let fxPaywall = fxPaywall else { 
-            print("Paywall2ViewController: No product or paywall available")
-            return 
-        }
-        
-        startPurchase(product: fxProduct, paywall: fxPaywall)
+    @objc func purchaseButtonTapped() {
+        PaywallManager.shared.handlePurchaseButtonTapped(
+            from: self,
+            placementId: placementId,
+            fxPaywall: fxPaywall!,
+            products: products
+        )
     }
     
     private func startPurchase(product: FXProduct, paywall: FXPaywall) {
@@ -399,7 +397,7 @@ class Paywall2ViewController: UIViewController {
                 UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
                     window.rootViewController = mainTabBarController
                 }) { _ in
-                    window.makeKeyAndVisible()
+                    //window.makeKeyAndVisible()
                 }
             }
         }
@@ -615,7 +613,7 @@ class Paywall2ViewController: UIViewController {
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let window = windowScene.windows.first {
                     window.rootViewController = UINavigationController(rootViewController: tabBarVC)
-                    window.makeKeyAndVisible()
+                    //window.makeKeyAndVisible()
                 }
             }
         }

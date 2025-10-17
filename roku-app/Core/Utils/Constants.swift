@@ -22,7 +22,6 @@ struct Constants {
     struct App {
         static let name = "Universal Remote"
         static let description = "Universal Remote Control for Smart TVs"
-        static let bundleIdentifier = "fenixmobile.rmt1.test"
         #if DEBUG
         static let apiBaseURL = "https://rokutvapp.com/"
         #else

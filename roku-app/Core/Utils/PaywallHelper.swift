@@ -146,7 +146,6 @@ enum PaywallPlacement: String, CaseIterable {
     case onboarding = "onboarding"
     case settings = "settings"
     case remote = "remote"
-    case premium = "premium"
     case main = "main"
     case onclose = "onclose"
     
@@ -158,8 +157,6 @@ enum PaywallPlacement: String, CaseIterable {
             return "Settings Paywall"
         case .remote:
             return "Remote Paywall"
-        case .premium:
-            return "Premium Paywall"
         case .main:
             return "Main Paywall"
         case .onclose:

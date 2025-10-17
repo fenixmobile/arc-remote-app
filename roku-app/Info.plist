@@ -8,6 +8,14 @@
 	<string>TV Remote uses the local network to discover your TV devices.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This app would like to track you across apps and websites to provide personalized ads and improve your experience.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app does not use camera.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app does not use microphone.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app does not use location services.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app does not access photo library.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Poppins-ThinItalic.ttf</string>

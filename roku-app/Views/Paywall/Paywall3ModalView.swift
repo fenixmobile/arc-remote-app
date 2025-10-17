@@ -59,7 +59,7 @@ class Paywall3ModalView: UIView {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.backgroundColor = UIColor(named: "button")
         button.layer.cornerRadius = 25
-        button.addTarget(self, action: #selector(continueButtonTapped), for: .touchUpInside)
+        button.addTarget(self, action: #selector(purchaseButtonTapped), for: .touchUpInside)
         return button
     }()
     
@@ -320,36 +320,14 @@ class Paywall3ModalView: UIView {
         NotificationCenter.default.post(name: NSNotification.Name("modalClosed"), object: nil)
     }
     
-    @objc func continueButtonTapped() {
-        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
-
-        guard let selectedProduct = products.first(where: { $0.selected }),
-              let fxPaywall = fxPaywall,
-              let fxProduct = fxPaywall.products?.first else { return }
-        
-        loadingActivityIndicatorView.startAnimating()
-        loadingActivityIndicatorView.isHidden = false
-        
-        continueButton.isEnabled = false
-        closeButton.isEnabled = false
-        
-        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.loadingActivityIndicatorView.stopAnimating()
-                self?.loadingActivityIndicatorView.isHidden = true
-                self?.continueButton.isEnabled = true
-                self?.closeButton.isEnabled = true
-                
-                switch result {
-                case .success(let purchaseInfo):
-                    print("Paywall3ModalView: Purchase successful: \(purchaseInfo)")
-                        NotificationCenter.default.post(name: NSNotification.Name("PurchaseCompleted"), object: nil)
-                case .failure(let error):
-                    print("Paywall3ModalView: Purchase failed: \(error)")
-                    self?.handlePurchaseFailure(error: error)
-                }
-            }
-        }
+    @objc func purchaseButtonTapped() {
+        guard let parentVC = findViewController() else { return }
+        PaywallManager.shared.handlePurchaseButtonTapped(
+            from: parentVC,
+            placementId: placementId,
+            fxPaywall: fxPaywall!,
+            products: products
+        )
     }
     
     private func handlePurchaseFailure(error: Error) {
@@ -390,5 +368,16 @@ extension Paywall3ModalView: UICollectionViewDataSource, UICollectionViewDelegat
         collectionView.reloadData()
         guard let selectedProduct = products.first(where: { $0.selected }) else { return }
         print(selectedProduct.identifier)
+    }
+    
+    private func findViewController() -> UIViewController? {
+        var responder: UIResponder? = self
+        while responder != nil {
+            if let viewController = responder as? UIViewController {
+                return viewController
+            }
+            responder = responder?.next
+        }
+        return nil
     }
 }
