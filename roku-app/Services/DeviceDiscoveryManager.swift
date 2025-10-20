@@ -26,13 +26,15 @@ class DeviceDiscoveryManager {
     private var isIncrementalDiscovery = false
     private var hasSentAnalyticsForCurrentSearch = false
     private var hasSentSearchFailAnalytics = false
-    private var previouslySentDeviceIPs: Set<String> = []
+    private var discoveredDevices: [TVDevice] = []
+    private var sentDeviceKeys: Set<String> = []
     
     func startDiscovery() {
         isIncrementalDiscovery = false
         hasSentAnalyticsForCurrentSearch = false
         hasSentSearchFailAnalytics = false
-        previouslySentDeviceIPs.removeAll()
+        discoveredDevices.removeAll()
+        sentDeviceKeys.removeAll()
         delegate?.didUpdateDiscoveryMessage("Cihazlar aranıyor...")
         
         startSSDPDiscovery(isIncremental: false)
@@ -58,7 +60,6 @@ class DeviceDiscoveryManager {
     func stopDiscovery() {
         ssdpClients.forEach { $0.stop() }
         ssdpClients.removeAll()
-        sendSearchSuccessAnalytics()
         delegate?.didFinishDiscovery()
     }
     
@@ -67,7 +68,6 @@ class DeviceDiscoveryManager {
         ssdpClients.removeAll()
         
         if isIncrementalDiscovery {
-            sendSearchSuccessAnalytics()
             delegate?.didDiscoverDevicesIncremental(incrementalDevices)
             incrementalDevices.removeAll()
         }
@@ -143,10 +143,19 @@ class DeviceDiscoveryManager {
             port: port
         )
         
+        let deviceKey = "\(host):\(deviceName)"
+        
         if isIncremental {
-            incrementalDevices.append(device)
+            if !incrementalDevices.contains(where: { "\($0.ipAddress):\($0.name)" == deviceKey }) {
+                incrementalDevices.append(device)
+                checkAndSendAnalytics()
+            }
         } else {
-            delegate?.didDiscoverDevice(device)
+            if !discoveredDevices.contains(where: { "\($0.ipAddress):\($0.name)" == deviceKey }) {
+                discoveredDevices.append(device)
+                delegate?.didDiscoverDevice(device)
+                checkAndSendAnalytics()
+            }
         }
     }
     
@@ -210,25 +219,27 @@ class DeviceDiscoveryManager {
         }
     }
     
-    private func sendSearchSuccessAnalytics() {
-        guard !hasSentAnalyticsForCurrentSearch else { return }
-        
-        let devicesToSend: [TVDevice]
+    private func checkAndSendAnalytics() {
+        let devicesToCheck: [TVDevice]
         
         if isIncrementalDiscovery {
-            devicesToSend = incrementalDevices
+            devicesToCheck = incrementalDevices
         } else {
-            devicesToSend = delegate?.getCurrentDevices() ?? []
+            devicesToCheck = discoveredDevices
         }
         
-        let newDevices = devicesToSend.filter { !previouslySentDeviceIPs.contains($0.ipAddress) }
-        
-        if newDevices.isEmpty {
-            sendSearchFailAnalytics()
-            return
+        let unsentDevices = devicesToCheck.filter { device in
+            let deviceKey = "\(device.ipAddress):\(device.name)"
+            return !sentDeviceKeys.contains(deviceKey)
         }
         
-        let devicesArray = newDevices.map { device in
+        if !unsentDevices.isEmpty {
+            sendSearchSuccessAnalytics(devices: unsentDevices)
+        }
+    }
+    
+    private func sendSearchSuccessAnalytics(devices: [TVDevice]) {
+        let devicesArray = devices.map { device in
             [
                 "device_type": device.brand.displayName,
                 "device_name": device.name
@@ -237,8 +248,10 @@ class DeviceDiscoveryManager {
         
         AnalyticsManager.shared.fxAnalytics.send(event: "search_success", properties: ["devices": devicesArray])
         
-        newDevices.forEach { previouslySentDeviceIPs.insert($0.ipAddress) }
-        hasSentAnalyticsForCurrentSearch = true
+        devices.forEach { device in
+            let deviceKey = "\(device.ipAddress):\(device.name)"
+            sentDeviceKeys.insert(deviceKey)
+        }
     }
     
     private func sendSearchFailAnalytics() {
@@ -259,6 +272,7 @@ extension DeviceDiscoveryManager: SSDPDiscoveryDelegate {
     
     func ssdpDiscovery(_ discovery: SSDPDiscovery, didFinishWithError error: Error) {
         print("SSDP Discovery error: \(error)")
+        sendSearchFailAnalytics()
     }
     
     func ssdpDiscoveryDidStart(_ discovery: SSDPDiscovery) {

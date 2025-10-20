@@ -310,7 +310,7 @@ class PaywallManager {
     }
     
     func handlePurchaseButtonTapped(from viewController: UIViewController, placementId: String, fxPaywall: FXPaywall, products: [Product], completion: (() -> Void)? = nil) {
-        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchase_start")
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_start")
 
         guard let fxProducts = fxPaywall.products, !fxProducts.isEmpty else {
             print("PaywallManager: No fxPaywall products available")
@@ -336,9 +336,27 @@ class PaywallManager {
                     print("PaywallManager: Purchase successful: \(purchaseInfo)")
                     SessionDataManager.shared.isPremium = true
                     self?.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
+                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_success")
+                    self?.getTrialInfo { [weak self] trialInfo in
+                        guard let self = self else { return }
+                        let event = trialInfo == "free_trial" ? AnalyticsEvent.startTrial.rawValue : AnalyticsEvent.startSubsctiption.rawValue
+                        let revenueType = trialInfo == "free_trial" ? "start-trial" : "start-subscription"
+
+                        AnalyticsManager.shared.fxAnalytics.revenueEvent(.init(event: event,
+                                                                               productIdentifier: selectedFxProduct.productId,
+                                                                               quantity: 1,
+                                                                               price: Double(truncating: selectedFxProduct.price as! NSNumber),
+                                                                               currency: selectedFxProduct.currencyCode,
+                                                                               revenueType: revenueType,
+                                                                               eventProperties: ["paywall": fxPaywall.name,
+                                                                                                 "source": "paywall"],
+                                                                               receipt: nil),
+                                                                         onlyFor: nil)
+                    }
                 case .failure(let error):
                     print("PaywallManager: Purchase failed: \(error)")
                     self?.handlePurchaseFailure(from: viewController, error: error, fxPaywall: fxPaywall, completion: completion)
+                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_failed")
                 }
             }
         }
@@ -363,6 +381,19 @@ class PaywallManager {
             window.rootViewController = mainTabBarController
         }) { _ in
             //window.makeKeyAndVisible()
+        }
+    }
+
+    private func getTrialInfo(completion: @escaping (String) -> Void) {
+        PaywallHelper.shared.fxPurchase?.getPurchaseInfo { result in
+            switch result {
+            case .success(let purchaseInfo):
+                print("DEBUG: [TRIAL INFO] Successfully received trial info: \(purchaseInfo.activeOfferType ?? "")")
+                completion(purchaseInfo.activeOfferType ?? "")
+            case .failure(let error):
+                print("DEBUG: [TRIAL INFO ERROR] Failed to get trial info: \(error)")
+                completion("")
+            }
         }
     }
 }

@@ -592,27 +592,39 @@ class DeviceDiscoveryViewController: UIViewController {
         
         let browser = NWBrowser(for: .bonjourWithTXTRecord(type: "_apple-mobdev2._tcp", domain: nil), using: NWParameters())
         
+        var hasSentAnalytics = false
+        
         browser.stateUpdateHandler = { state in
+            guard !hasSentAnalytics else { return }
+            
             switch state {
             case .setup, .ready, .failed:
                 DispatchQueue.main.async {
+                    hasSentAnalytics = true
                     browser.cancel()
                     monitor.cancel()
+                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_allow")
                     completion()
                 }
             case .cancelled:
                 DispatchQueue.main.async {
+                    hasSentAnalytics = true
+                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
                     completion()
                 }
             case .waiting(_):
                 print("🔍 Waiting for local network permission...")
                 DispatchQueue.main.async {
+                    hasSentAnalytics = true
                     browser.cancel()
                     monitor.cancel()
+                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
                     completion()
                 }
             @unknown default:
                 DispatchQueue.main.async {
+                    hasSentAnalytics = true
+                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
                     completion()
                 }
             }

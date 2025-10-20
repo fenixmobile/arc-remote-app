@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import StoreKit
 
 class SettingsViewController: UIViewController {
     
@@ -172,9 +173,14 @@ class SettingsViewController: UIViewController {
     
     private func rateApp() {
         AnalyticsManager.shared.fxAnalytics.send(event: "settings_rate")
+        if ProcessInfo.processInfo.arguments.contains("uitest") {
+            return
+        }
         if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
             if #available(iOS 14.0, *) {
-                openURL(Constants.URLs.appStoreReview, title: "Rate Us")
+                SKStoreReviewController.requestReview(in: scene)
+            } else {
+                // Fallback on earlier versions
             }
         }
     }

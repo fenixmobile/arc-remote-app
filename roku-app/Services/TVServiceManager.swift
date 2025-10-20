@@ -129,6 +129,22 @@ class TVServiceManager: ObservableObject {
             currentService = service
             print("🔗 Current service saklandı: \(device.id)")
             
+            let finalDevice = device
+            DispatchQueue.main.async {
+                if self.currentDevice?.id == finalDevice.id {
+                    print("🔗 TVServiceManager: Aynı cihaz, güncelleme atlanıyor: \(finalDevice.displayName)")
+                    return
+                }
+                
+                print("🔗 TVServiceManager: currentDevice güncelleniyor: \(finalDevice.displayName) - \(finalDevice.brand)")
+                print("🔗 TVServiceManager: currentDevice önceki değer: \(self.currentDevice?.displayName ?? "nil")")
+                let previousDevice = self.currentDevice
+                self.currentDevice = finalDevice
+                self.lastConnectedDevice = previousDevice
+                print("🔗 TVServiceManager: currentDevice yeni değer: \(self.currentDevice?.displayName ?? "nil")")
+                print("🔗 TVServiceManager: lastConnectedDevice set edildi: \(self.lastConnectedDevice?.displayName ?? "nil")")
+            }
+            
             AnalyticsManager.shared.fxAnalytics.send(event: "device_connect_success", properties: [
                 "device_type": device.brand.displayName,
                 "device_name": device.name

@@ -29,7 +29,7 @@ extension FXProduct {
 class PaywallHelper {
     static let shared = PaywallHelper()
     
-    private var fxPurchase: FXPurchase?
+    var fxPurchase: FXPurchase?
     private let cacheManager = PaywallCacheManager.shared
     
     private init() {
