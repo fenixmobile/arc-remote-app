@@ -27,14 +27,26 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+        if let splashVC = navigationViewController?.topViewController as? SplashViewController {
+            splashVC.appDidBecomeActive()
+        }
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
+        if let splashVC = navigationViewController?.topViewController as? SplashViewController {
+            splashVC.appWillResignActive()
+        }
     }
 
     func sceneWillEnterForeground(_ scene: UIScene) {
+        if let splashVC = navigationViewController?.topViewController as? SplashViewController {
+            splashVC.appWillEnterForeground()
+        }
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
+        if let splashVC = navigationViewController?.topViewController as? SplashViewController {
+            splashVC.appDidEnterBackground()
+        }
     }
 }

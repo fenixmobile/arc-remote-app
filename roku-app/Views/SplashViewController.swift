@@ -5,7 +5,6 @@ import FXFramework
 class SplashViewController: UIViewController {
     
     var loginCompleted: Bool = false
-    var delayCompleted: Bool = false
     
     var connetionAlertController: UIAlertController?
     var networkCheck = NetworkCheck.sharedInstance()
@@ -60,6 +59,7 @@ class SplashViewController: UIViewController {
     }()
     
     var loginCancellable: Cancelable?
+    var isAppInBackground = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -67,11 +67,6 @@ class SplashViewController: UIViewController {
         setupConstraints()
         startAnimation()
         connectionCheckAndSendDeviceInfo()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now()+3) { [weak self] in
-            guard let self = self else { return }
-            self.delayCompleted = true
-        }
     }
     
     private func setupViews() {
@@ -244,7 +239,7 @@ class SplashViewController: UIViewController {
     }
     
     func navigate() {
-        if delayCompleted && loginCompleted {
+        if loginCompleted {
             if SessionDataManager.shared.onBoardingSeen {
                 let mainTabBarController = MainTabBarController()
                 self.navigationController?.setViewControllers([mainTabBarController], animated: false)
@@ -262,6 +257,26 @@ class SplashViewController: UIViewController {
                                              completion1: { self.retryConnect() },
                                              actionTitle2: nil,
                                              completion2: nil)
+    }
+    
+    func appDidBecomeActive() {
+        if isAppInBackground && !loginCompleted {
+            connectionCheckAndSendDeviceInfo()
+        } else if isAppInBackground && loginCompleted {
+            navigate()
+        }
+    }
+    
+    func appWillResignActive() {
+        isAppInBackground = true
+    }
+    
+    func appWillEnterForeground() {
+        isAppInBackground = false
+    }
+    
+    func appDidEnterBackground() {
+        isAppInBackground = true
     }
     
     func showAlert(title: String,
