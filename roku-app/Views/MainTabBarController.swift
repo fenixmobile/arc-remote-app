@@ -20,8 +20,8 @@ class MainTabBarController: UITabBarController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupTabBarConstraints()
-        setupViewControllers()
         checkAndShowMainPaywall()
+        setupViewControllers()
         delegate = self
     }
     
@@ -67,7 +67,7 @@ class MainTabBarController: UITabBarController {
             return 
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now()) {
             PaywallManager.shared.showDynamicPaywall(placementId: "main", from: self)
         }
     }
