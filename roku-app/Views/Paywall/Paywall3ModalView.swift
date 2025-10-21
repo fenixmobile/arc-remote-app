@@ -371,6 +371,14 @@ extension Paywall3ModalView: UICollectionViewDataSource, UICollectionViewDelegat
         products[indexPath.row].selected = true
         collectionView.reloadData()
         guard let selectedProduct = products.first(where: { $0.selected }) else { return }
+        
+        AnalyticsManager.shared.fxAnalytics.send(event: "select_product", properties: [
+            "product_name": selectedProduct.title,
+            "product_id": selectedProduct.identifier,
+            "placement": placementId,
+            "paywall": fxPaywall?.name ?? ""
+        ])
+        
         print(selectedProduct.identifier)
     }
     

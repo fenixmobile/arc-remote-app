@@ -576,5 +576,13 @@ extension Paywall1ViewController: UICollectionViewDelegate, UICollectionViewData
         products.forEach{ $0.selected = false }
         products[indexPath.row].selected = true
         collectionView.reloadData()
+        
+        let selectedProduct = products[indexPath.row]
+        AnalyticsManager.shared.fxAnalytics.send(event: "select_product", properties: [
+            "product_name": selectedProduct.title,
+            "product_id": selectedProduct.identifier,
+            "placement": placementId,
+            "paywall": fxPaywall?.name ?? ""
+        ])
     }
 }

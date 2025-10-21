@@ -158,15 +158,31 @@ class PaywallManager {
             return
         }
         
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_start", properties: [
+            "paywall": paywall.name,
+            "placement": placementId,
+            "product": firstProduct.productId
+        ])
+        
         PaywallHelper.shared.purchaseProduct(placementId: placementId, product: firstProduct) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:
                     print("PaywallManager: Purchase successful")
                     SessionDataManager.shared.isPremium = true
+                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_success", properties: [
+                        "paywall": paywall.name,
+                        "placement": placementId,
+                        "product": firstProduct.productId
+                    ])
                     self.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
                 case .failure(let error):
                     print("PaywallManager: Purchase failed: \(error)")
+                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_failed", properties: [
+                        "paywall": paywall.name,
+                        "placement": placementId,
+                        "product": firstProduct.productId
+                    ])
                     
                     if let remoteConfig = paywall.remoteConfig,
                        let displayOnClosePaywallFailure = remoteConfig["display_onClose_paywall_failure"] as? Bool,
@@ -310,7 +326,11 @@ class PaywallManager {
     }
     
     func handlePurchaseButtonTapped(from viewController: UIViewController, placementId: String, fxPaywall: FXPaywall, products: [Product], completion: (() -> Void)? = nil) {
-        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_start")
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_start", properties: [
+            "paywall": fxPaywall.name,
+            "placement": placementId,
+            "product": products.first(where: { $0.selected })?.identifier ?? products.first?.identifier ?? ""
+        ])
 
         guard let fxProducts = fxPaywall.products, !fxProducts.isEmpty else {
             print("PaywallManager: No fxPaywall products available")
@@ -336,7 +356,11 @@ class PaywallManager {
                     print("PaywallManager: Purchase successful: \(purchaseInfo)")
                     SessionDataManager.shared.isPremium = true
                     self?.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
-                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_success")
+                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_success", properties: [
+                        "paywall": fxPaywall.name,
+                        "placement": placementId,
+                        "product": selectedFxProduct.productId
+                    ])
                     self?.getTrialInfo { [weak self] trialInfo in
                         guard let self = self else { return }
                         let event = trialInfo == "free_trial" ? AnalyticsEvent.startTrial.rawValue : AnalyticsEvent.startSubsctiption.rawValue
@@ -349,14 +373,19 @@ class PaywallManager {
                                                                                currency: selectedFxProduct.currencyCode,
                                                                                revenueType: revenueType,
                                                                                eventProperties: ["paywall": fxPaywall.name,
-                                                                                                 "source": "paywall"],
+                                                                                                 "source": "paywall",
+                                                                                                 "currency": selectedFxProduct.currencyCode],
                                                                                receipt: nil),
                                                                          onlyFor: nil)
                     }
                 case .failure(let error):
                     print("PaywallManager: Purchase failed: \(error)")
                     self?.handlePurchaseFailure(from: viewController, error: error, fxPaywall: fxPaywall, completion: completion)
-                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_failed")
+                    AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_failed", properties: [
+                        "paywall": fxPaywall.name,
+                        "placement": placementId,
+                        "product": selectedFxProduct.productId
+                    ])
                 }
             }
         }
