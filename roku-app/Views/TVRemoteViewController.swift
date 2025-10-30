@@ -7,6 +7,7 @@
 
 import UIKit
 import Combine
+import Network
 
 class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     
@@ -95,6 +96,14 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
         setupConstraints()
         setupBindings()
         setupNotificationObservers()
+        startSSDPForPermission()
+    }
+    
+    private func startSSDPForPermission() {
+        print("🔍 Main page: Starting SSDP to trigger Local Network permission")
+        let deviceDiscoveryManager = DeviceDiscoveryManager()
+        deviceDiscoveryManager.delegate = self
+        deviceDiscoveryManager.startDiscovery()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -313,6 +322,88 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
     }
     
     private func showDeviceList() {
+        checkNetworkPermissionsBeforeShowDeviceList()
+    }
+    
+    private func checkNetworkPermissionsBeforeShowDeviceList() {
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                let hasWiFiInterface = path.availableInterfaces.contains { interface in
+                    interface.type == .wifi
+                }
+                
+                if hasWiFiInterface {
+                    self?.checkLocalNetworkPermissionForDeviceList()
+                } else {
+                    AnalyticsManager.shared.fxAnalytics.send(event: "wifi_not_connected")
+                    self?.showNetworkPermissionVC(type: .wifiNotConnected)
+                }
+                monitor.cancel()
+            }
+        }
+        monitor.start(queue: DispatchQueue.global())
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            monitor.cancel()
+        }
+    }
+    
+    private func checkLocalNetworkPermissionForDeviceList() {
+        let monitor = NWPathMonitor(requiredInterfaceType: .wifi)
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                if path.status == .satisfied {
+                    self?.startDiscoveryForPermissionCheck()
+                } else {
+                    self?.showNetworkPermissionVC(type: .wifiNotConnected)
+                }
+                monitor.cancel()
+            }
+        }
+        monitor.start(queue: DispatchQueue.global())
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            monitor.cancel()
+        }
+    }
+    
+    private func startDiscoveryForPermissionCheck() {
+        #if targetEnvironment(simulator)
+        showDeviceListVC()
+        return
+        #endif
+        
+        if #available(iOS 14.0, *) {
+            LocalNetworkPermissionManager.shared.checkPermission { [weak self] status in
+                DispatchQueue.main.async {
+                    switch status {
+                    case .granted:
+                        AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_allow")
+                        self?.showDeviceListVC()
+                    case .denied:
+                        AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
+                        self?.showNetworkPermissionVC(type: .localNetworkNotAllowed)
+                    case .notDetermined, .checking:
+                        break
+                    }
+                }
+            }
+        } else {
+            showDeviceListVC()
+        }
+    }
+    
+    private func showNetworkPermissionVC(type: NetworkPermissionType) {
+        let networkPermissionVC = NetworkPermissionVC()
+        networkPermissionVC.permissionType = type
+        networkPermissionVC.onPermissionGranted = { [weak self] in
+            self?.startDiscoveryForPermissionCheck()
+        }
+        networkPermissionVC.modalPresentationStyle = .fullScreen
+        present(networkPermissionVC, animated: true)
+    }
+    
+    private func showDeviceListVC() {
         let deviceListVC = DeviceDiscoveryViewController()
         let navigationController = UINavigationController(rootViewController: deviceListVC)
         navigationController.modalPresentationStyle = .fullScreen
@@ -486,5 +577,27 @@ extension TVRemoteViewController {
         }
         
         print("⌨️ Keyboard açıldı")
+    }
+}
+
+extension TVRemoteViewController: DeviceDiscoveryDelegate {
+    func didDiscoverDevice(_ device: TVDevice) {
+        print("🔍 Discovered device on main page: \(device.name)")
+    }
+    
+    func didDiscoverDevicesIncremental(_ devices: [TVDevice]) {
+        print("🔍 Discovered incremental devices")
+    }
+    
+    func didFinishDiscovery() {
+        print("🔍 Main page discovery finished")
+    }
+    
+    func didUpdateDiscoveryMessage(_ message: String) {
+        print("🔍 Discovery message: \(message)")
+    }
+    
+    func getCurrentDevices() -> [TVDevice] {
+        return []
     }
 }

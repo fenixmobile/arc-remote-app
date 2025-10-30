@@ -10,6 +10,11 @@ class DeviceDiscoveryViewController: UIViewController {
     private let emptyStateLabel = UILabel()
     private let searchIconView = UIImageView()
     private let searchCircleView = UIImageView()
+    private let permissionView = UIView()
+    private let permissionIconView = UIImageView()
+    private let permissionTitleLabel = UILabel()
+    private let permissionMessageLabel = UILabel()
+    private let permissionButton = UIButton(type: .system)
     
     private let viewModel = TVRemoteViewModel()
     private var cancellables = Set<AnyCancellable>()
@@ -26,8 +31,6 @@ class DeviceDiscoveryViewController: UIViewController {
     private var searchIconCenterYConstraint: NSLayoutConstraint?
     private var searchCircleCenterXConstraint: NSLayoutConstraint?
     private var searchCircleCenterYConstraint: NSLayoutConstraint?
-    
-    private var localNetworkPermissionRequested = false
     
     private enum Constants {
         static let cellHeight: CGFloat = 80
@@ -54,18 +57,7 @@ class DeviceDiscoveryViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         refreshButton.isHidden = true
-        startAutoDiscovery()
-        print("🔍 DeviceDiscoveryViewController: viewWillAppear çağrıldı")
-        
-        requestLocalNetworkPermissionIfNeeded { [weak self] in
-            DispatchQueue.main.async {
-                print("🔍 Permission request completed, starting incremental discovery...")
-                if self?.viewModel.discoveredDevices.isEmpty == true {
-                    self?.isAutoDiscovery = true
-                    self?.startIncrementalDiscovery()
-                }
-            }
-        }
+        startDeviceDiscovery()
     }
     
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -79,7 +71,7 @@ class DeviceDiscoveryViewController: UIViewController {
     }
     
     deinit {
-        print("🔍 DeviceDiscoveryViewController: deinit çağrıldı")
+        print("🔍 DeviceDiscoveryViewController: deinit called")
         stopAutoDiscovery()
         cancellables.removeAll()
     }
@@ -93,12 +85,14 @@ class DeviceDiscoveryViewController: UIViewController {
         setupRefreshIcon()
         setupEmptyStateLabel()
         setupSearchAnimation()
+        setupPermissionView()
         
         view.addSubview(tableView)
         view.addSubview(refreshButton)
         view.addSubview(emptyStateLabel)
         view.addSubview(searchIconView)
         view.addSubview(searchCircleView)
+        view.addSubview(permissionView)
     }
     
     private func setupNavigationBar() {
@@ -178,6 +172,44 @@ class DeviceDiscoveryViewController: UIViewController {
         searchCircleView.isHidden = true
     }
     
+    private func setupPermissionView() {
+        permissionView.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
+        permissionView.layer.cornerRadius = 16
+        permissionView.translatesAutoresizingMaskIntoConstraints = false
+        permissionView.isHidden = true
+        
+        permissionIconView.image = UIImage(systemName: "wifi.exclamationmark")
+        permissionIconView.tintColor = .systemOrange
+        permissionIconView.contentMode = .scaleAspectFit
+        permissionIconView.translatesAutoresizingMaskIntoConstraints = false
+        
+        permissionTitleLabel.text = "Local Network Permission Required"
+        permissionTitleLabel.textColor = .white
+        permissionTitleLabel.font = .boldSystemFont(ofSize: 18)
+        permissionTitleLabel.textAlignment = .center
+        permissionTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        permissionMessageLabel.text = "To discover TV devices on your network, please allow local network access in Settings."
+        permissionMessageLabel.textColor = .systemGray
+        permissionMessageLabel.font = .systemFont(ofSize: 14)
+        permissionMessageLabel.textAlignment = .center
+        permissionMessageLabel.numberOfLines = 0
+        permissionMessageLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        permissionButton.setTitle("Open Settings", for: .normal)
+        permissionButton.backgroundColor = UIColor(red: 96/255, green: 18/255, blue: 197/255, alpha: 1.0)
+        permissionButton.setTitleColor(.white, for: .normal)
+        permissionButton.layer.cornerRadius = 12
+        permissionButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+        permissionButton.translatesAutoresizingMaskIntoConstraints = false
+        permissionButton.addTarget(self, action: #selector(openSettingsTapped), for: .touchUpInside)
+        
+        permissionView.addSubview(permissionIconView)
+        permissionView.addSubview(permissionTitleLabel)
+        permissionView.addSubview(permissionMessageLabel)
+        permissionView.addSubview(permissionButton)
+    }
+    
     private func setupConstraints() {
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -206,7 +238,31 @@ class DeviceDiscoveryViewController: UIViewController {
             searchCircleView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             searchCircleView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             searchCircleView.widthAnchor.constraint(equalToConstant: 120),
-            searchCircleView.heightAnchor.constraint(equalToConstant: 120)
+            searchCircleView.heightAnchor.constraint(equalToConstant: 120),
+            
+            permissionView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            permissionView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            permissionView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            permissionView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+            
+            permissionIconView.topAnchor.constraint(equalTo: permissionView.topAnchor, constant: 24),
+            permissionIconView.centerXAnchor.constraint(equalTo: permissionView.centerXAnchor),
+            permissionIconView.widthAnchor.constraint(equalToConstant: 48),
+            permissionIconView.heightAnchor.constraint(equalToConstant: 48),
+            
+            permissionTitleLabel.topAnchor.constraint(equalTo: permissionIconView.bottomAnchor, constant: 16),
+            permissionTitleLabel.leadingAnchor.constraint(equalTo: permissionView.leadingAnchor, constant: 20),
+            permissionTitleLabel.trailingAnchor.constraint(equalTo: permissionView.trailingAnchor, constant: -20),
+            
+            permissionMessageLabel.topAnchor.constraint(equalTo: permissionTitleLabel.bottomAnchor, constant: 12),
+            permissionMessageLabel.leadingAnchor.constraint(equalTo: permissionView.leadingAnchor, constant: 20),
+            permissionMessageLabel.trailingAnchor.constraint(equalTo: permissionView.trailingAnchor, constant: -20),
+            
+            permissionButton.topAnchor.constraint(equalTo: permissionMessageLabel.bottomAnchor, constant: 24),
+            permissionButton.centerXAnchor.constraint(equalTo: permissionView.centerXAnchor),
+            permissionButton.widthAnchor.constraint(equalToConstant: 200),
+            permissionButton.heightAnchor.constraint(equalToConstant: 44),
+            permissionButton.bottomAnchor.constraint(equalTo: permissionView.bottomAnchor, constant: -24)
         ])
         
         searchIconWidthConstraint = searchIconView.widthAnchor.constraint(equalToConstant: 60)
@@ -571,71 +627,85 @@ class DeviceDiscoveryViewController: UIViewController {
         present(alert, animated: true)
     }
     
-    private func requestLocalNetworkPermissionIfNeeded(completion: @escaping () -> Void) {
-        guard !localNetworkPermissionRequested else {
-            completion()
-            return
-        }
-        
-        localNetworkPermissionRequested = true
+    private func checkLocalNetworkPermission() {
+        print("🔍 Device Discovery: Checking permission before search...")
         
         #if targetEnvironment(simulator)
-        print("🔍 Simulator: Local network permission request simulated")
-        completion()
-        #else
+        print("🔍 Simulator: Skipping permission check, starting discovery")
+        AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_allow")
+        self.hidePermissionView()
+        self.startDeviceDiscovery()
+        return
+        #endif
         
-        let monitor = NWPathMonitor()
-        let monitorQueue = DispatchQueue(label: "NetworkPermissionMonitor")
-        
-        monitor.pathUpdateHandler = { _ in }
-        monitor.start(queue: monitorQueue)
-        
-        let browser = NWBrowser(for: .bonjourWithTXTRecord(type: "_apple-mobdev2._tcp", domain: nil), using: NWParameters())
-        
-        var hasSentAnalytics = false
-        
-        browser.stateUpdateHandler = { state in
-            guard !hasSentAnalytics else { return }
-            
-            switch state {
-            case .setup, .ready, .failed:
+        if #available(iOS 14.0, *) {
+            LocalNetworkPermissionManager.shared.checkPermission { [weak self] status in
                 DispatchQueue.main.async {
-                    hasSentAnalytics = true
-                    browser.cancel()
-                    monitor.cancel()
-                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_allow")
-                    completion()
+                    print("🔍 Device Discovery: Permission check sonucu: \(status)")
+                    switch status {
+                    case .granted:
+                        AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_allow")
+                        self?.hidePermissionView()
+                        self?.startDeviceDiscovery()
+                    case .denied:
+                        AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
+                        self?.showNetworkPermissionVC()
+                    case .notDetermined:
+                        AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_unknown")
+                        self?.hidePermissionView()
+                        self?.startDeviceDiscovery()
+                    case .checking:
+                        print("🔍 Permission check devam ediyor...")
+                    }
                 }
-            case .cancelled:
-                DispatchQueue.main.async {
-                    hasSentAnalytics = true
-                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
-                    completion()
-                }
-            case .waiting(_):
-                print("🔍 Waiting for local network permission...")
-                DispatchQueue.main.async {
-                    hasSentAnalytics = true
-                    browser.cancel()
-                    monitor.cancel()
-                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
-                    completion()
-                }
-            @unknown default:
-                DispatchQueue.main.async {
-                    hasSentAnalytics = true
-                    AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_decline")
-                    completion()
-                }
+            }
+        } else {
+            print("🔍 iOS 14.0 öncesi, starting discovery")
+            AnalyticsManager.shared.fxAnalytics.send(event: "local_network_permission_allow")
+            self.hidePermissionView()
+            self.startDeviceDiscovery()
+        }
+    }
+    
+    private func showNetworkPermissionVC() {
+        let networkPermissionVC = NetworkPermissionVC()
+        networkPermissionVC.onPermissionGranted = { [weak self] in
+            self?.dismiss(animated: true) {
+                self?.hidePermissionView()
+                self?.startDeviceDiscovery()
             }
         }
         
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.1) {
-            browser.start(queue: monitorQueue)
-        }
-        #endif
+        let navController = UINavigationController(rootViewController: networkPermissionVC)
+        navController.modalPresentationStyle = .fullScreen
+        
+        present(navController, animated: true)
     }
+    
+    private func hidePermissionView() {
+        permissionView.isHidden = true
+        tableView.isHidden = false
+    }
+    
+    private func startDeviceDiscovery() {
+        DispatchQueue.main.async {
+            print("🔍 Starting discovery...")
+            self.startAutoDiscovery()
+            if self.viewModel.discoveredDevices.isEmpty == true {
+                self.isAutoDiscovery = true
+                self.startIncrementalDiscovery()
+            }
+        }
+    }
+    
+    @objc private func openSettingsTapped() {
+        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsUrl)
+        }
+    }
+    
 }
+
 
 extension DeviceDiscoveryViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -845,6 +915,62 @@ class DeviceTableViewCell: UITableViewCell {
             connectionStatusView.backgroundColor = .clear
             connectButton.setTitle("Connect", for: .normal)
             connectButton.backgroundColor = UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        }
+    }
+}
+
+class SSDPPermissionCheckDelegate: SSDPDiscoveryDelegate {
+    private let completion: (Bool) -> Void
+    private var hasCalledCompletion = false
+    private var socketOpened = false
+    private var foundDevice = false
+    private var hasPermissionError = false
+    
+    init(completion: @escaping (Bool) -> Void) {
+        self.completion = completion
+    }
+    
+    func ssdpDiscoveryDidStart(_ discovery: SSDPDiscovery) {
+        print("🔍 SSDP Permission check started")
+        socketOpened = true
+    }
+    
+    func ssdpDiscovery(_ discovery: SSDPDiscovery, didDiscoverService service: SSDPService) {
+        print("🔍 SSDP Found device - permission granted!")
+        foundDevice = true
+        if !hasCalledCompletion {
+            hasCalledCompletion = true
+            completion(true)
+        }
+    }
+    
+    func ssdpDiscovery(_ discovery: SSDPDiscovery, didFinishWithError error: Error) {
+        print("🔍 SSDP Error: \(error)")
+        let errorCode = (error as NSError).code
+        let errorDesc = error.localizedDescription
+        
+        if errorDesc.contains("EPERM") || errorDesc.contains("-65555") || errorCode == -65555 {
+            print("🔍 Permission denied error detected")
+            hasPermissionError = true
+        }
+    }
+    
+    func ssdpDiscoveryDidFinish(_ discovery: SSDPDiscovery) {
+        print("🔍 SSDP Finished - Socket opened: \(socketOpened), Found device: \(foundDevice), Permission error: \(hasPermissionError)")
+        
+        if !hasCalledCompletion {
+            hasCalledCompletion = true
+            
+            if hasPermissionError {
+                print("🔍 Completing with denied (permission error)")
+                completion(false)
+            } else if socketOpened || foundDevice {
+                print("🔍 Completing with granted (socket opened or device found)")
+                completion(true)
+            } else {
+                print("🔍 No clear indication - assuming granted")
+                completion(true)
+            }
         }
     }
 }
