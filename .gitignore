@@ -25,6 +25,7 @@ Podfile.lock
 # Swift Package Manager
 .swiftpm/
 Package.resolved
+.build/
 
 # Carthage
 Carthage/Build/

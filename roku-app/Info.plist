@@ -37,5 +37,9 @@
 		<string>Poppins-Black.ttf</string>
 		<string>Poppins-BlackItalic.ttf</string>
 	</array>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_lnp._tcp</string>
+	</array>
 </dict>
 </plist>
