@@ -2,29 +2,29 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>API_KEY</key>
-	<string>AIzaSyBg3yBpeXi-Vy4MydXET_KSGZD4K1NXXKw</string>
-	<key>GCM_SENDER_ID</key>
-	<string>204093418071</string>
-	<key>PLIST_VERSION</key>
-	<string>1</string>
-	<key>BUNDLE_ID</key>
-	<string>arc.remote.app</string>
-	<key>PROJECT_ID</key>
-	<string>remote-control-e8b19</string>
-	<key>STORAGE_BUCKET</key>
-	<string>remote-control-e8b19.appspot.com</string>
-	<key>IS_ADS_ENABLED</key>
-	<false></false>
-	<key>IS_ANALYTICS_ENABLED</key>
-	<false></false>
-	<key>IS_APPINVITE_ENABLED</key>
-	<true></true>
-	<key>IS_GCM_ENABLED</key>
-	<true></true>
-	<key>IS_SIGNIN_ENABLED</key>
-	<true></true>
-	<key>GOOGLE_APP_ID</key>
-	<string>1:204093418071:ios:e1fb68f58566c0f37f5112</string>
+    <key>API_KEY</key>
+    <string>AIzaSyBg3yBpeXi-Vy4MydXET_KSGZD4K1NXXKw</string>
+    <key>GCM_SENDER_ID</key>
+    <string>204093418071</string>
+    <key>PLIST_VERSION</key>
+    <string>1</string>
+    <key>BUNDLE_ID</key>
+    <string>arc.remote.app</string>
+    <key>PROJECT_ID</key>
+    <string>remote-control-e8b19</string>
+    <key>STORAGE_BUCKET</key>
+    <string>remote-control-e8b19.firebasestorage.app</string>
+    <key>IS_ADS_ENABLED</key>
+    <false></false>
+    <key>IS_ANALYTICS_ENABLED</key>
+    <false></false>
+    <key>IS_APPINVITE_ENABLED</key>
+    <true></true>
+    <key>IS_GCM_ENABLED</key>
+    <true></true>
+    <key>IS_SIGNIN_ENABLED</key>
+    <true></true>
+    <key>GOOGLE_APP_ID</key>
+    <string>1:204093418071:ios:e1fb68f58566c0f37f5112</string>
 </dict>
 </plist>
