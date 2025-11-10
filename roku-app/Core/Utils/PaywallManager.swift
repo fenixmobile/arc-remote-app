@@ -365,6 +365,7 @@ class PaywallManager {
                         guard let self = self else { return }
                         let event = trialInfo == "free_trial" ? AnalyticsEvent.startTrial.rawValue : AnalyticsEvent.startSubsctiption.rawValue
                         let revenueType = trialInfo == "free_trial" ? "start-trial" : "start-subscription"
+                        let frbEvent = trialInfo == "free_trial" ? "frb_start_trial" : "frb_start_subscription"
 
                         AnalyticsManager.shared.fxAnalytics.revenueEvent(.init(event: event,
                                                                                productIdentifier: selectedFxProduct.productId,
@@ -377,6 +378,20 @@ class PaywallManager {
                                                                                                  "currency": selectedFxProduct.currencyCode],
                                                                                receipt: nil),
                                                                          onlyFor: nil)
+                        
+                        AnalyticsManager.shared.fxAnalytics.revenueEvent(.init(event: AnalyticsEvent.startPro.rawValue,
+                                                                               productIdentifier: selectedFxProduct.productId,
+                                                                               quantity: 1,
+                                                                               price: Double(truncating: selectedFxProduct.price as! NSNumber),
+                                                                               currency: selectedFxProduct.currencyCode,
+                                                                               revenueType: revenueType,
+                                                                               eventProperties: ["paywall": fxPaywall.name,
+                                                                                                 "source": "paywall",
+                                                                                                 "currency": selectedFxProduct.currencyCode],
+                                                                               receipt: nil),
+                                                                         onlyFor: .adjust)
+                                                                         
+                        AnalyticsManager.shared.fxAnalytics.send(event: "\(frbEvent)", properties: nil, onlyFor: .firebase)
                     }
                 case .failure(let error):
                     print("PaywallManager: Purchase failed: \(error)")

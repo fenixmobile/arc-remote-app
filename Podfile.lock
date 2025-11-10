@@ -187,7 +187,7 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   FXFramework:
-    :commit: 838d86b56aed51e906af709d21affc984661b784
+    :commit: df215d0011cc57c4a36872c46ffbb488f631e9de
     :git: https://github.com/fenixmobile/FXFramework.git
 
 SPEC CHECKSUMS:

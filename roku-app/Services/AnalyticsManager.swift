@@ -11,6 +11,7 @@ import FXFramework
 enum AnalyticsEvent: String {
     case startTrial = "adjust_start_trial"
     case startSubsctiption = "adjust_start_subscription"
+    case startPro = "adjust_start_pro"
 }
 
 class AnalyticsManager {
@@ -70,6 +71,12 @@ extension AnalyticsManager: AdjustFXAnalyticsServiceTokenDelegate {
             return "4u4dby" //test
 #else
             return "221yy6" //product
+#endif
+        case AnalyticsEvent.startPro.rawValue:
+#if DEBUG
+            return "7ehjju" //test
+#else
+            return "w0a1rh" //product
 #endif
         default:
             return nil
