@@ -26,13 +26,13 @@ class TVServiceManager: ObservableObject {
         discoveryManager.delegate = self
     }
 
-    func startDiscovery() {
+    func startDiscovery(shouldSendSearchFailAnalytics: Bool = false) {
         DispatchQueue.main.async {
             self.isDiscovering = true
             self.discoveredDevices = []
         }
         
-        discoveryManager.startDiscovery()
+        discoveryManager.startDiscovery(shouldSendSearchFailAnalytics: shouldSendSearchFailAnalytics)
     }
     
     func startIncrementalDiscovery() {

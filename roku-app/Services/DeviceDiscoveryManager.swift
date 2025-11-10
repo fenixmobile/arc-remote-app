@@ -28,8 +28,10 @@ class DeviceDiscoveryManager {
     private var hasSentSearchFailAnalytics = false
     private var discoveredDevices: [TVDevice] = []
     private var sentDeviceKeys: Set<String> = []
+    private var shouldSendSearchFailAnalytics = false
     
-    func startDiscovery() {
+    func startDiscovery(shouldSendSearchFailAnalytics: Bool = false) {
+        self.shouldSendSearchFailAnalytics = shouldSendSearchFailAnalytics
         isIncrementalDiscovery = false
         hasSentAnalyticsForCurrentSearch = false
         hasSentSearchFailAnalytics = false
@@ -61,7 +63,7 @@ class DeviceDiscoveryManager {
         ssdpClients.forEach { $0.stop() }
         ssdpClients.removeAll()
         
-        if discoveredDevices.isEmpty && !hasSentSearchFailAnalytics {
+        if shouldSendSearchFailAnalytics && discoveredDevices.isEmpty && !hasSentSearchFailAnalytics {
             sendSearchFailAnalytics()
         }
         
@@ -278,9 +280,11 @@ extension DeviceDiscoveryManager: SSDPDiscoveryDelegate {
     func ssdpDiscovery(_ discovery: SSDPDiscovery, didFinishWithError error: Error) {
         print("SSDP Discovery error: \(error)")
         
-        let devicesToCheck = isIncrementalDiscovery ? incrementalDevices : discoveredDevices
-        if devicesToCheck.isEmpty && !hasSentSearchFailAnalytics {
-            sendSearchFailAnalytics()
+        if shouldSendSearchFailAnalytics {
+            let devicesToCheck = isIncrementalDiscovery ? incrementalDevices : discoveredDevices
+            if devicesToCheck.isEmpty && !hasSentSearchFailAnalytics {
+                sendSearchFailAnalytics()
+            }
         }
     }
     

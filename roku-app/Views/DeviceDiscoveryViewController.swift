@@ -344,7 +344,7 @@ class DeviceDiscoveryViewController: UIViewController {
     
     private func startDiscovery() {
         refreshButton.isHidden = true
-        viewModel.startDiscovery()
+        viewModel.startDiscovery(shouldSendSearchFailAnalytics: true)
     }
     
     private func startIncrementalDiscovery() {

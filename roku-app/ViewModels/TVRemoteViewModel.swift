@@ -43,9 +43,9 @@ class TVRemoteViewModel: ObservableObject {
     }
     
     
-    func startDiscovery() {
+    func startDiscovery(shouldSendSearchFailAnalytics: Bool = false) {
         errorMessage = nil
-        tvServiceManager.startDiscovery()
+        tvServiceManager.startDiscovery(shouldSendSearchFailAnalytics: shouldSendSearchFailAnalytics)
     }
     
     func startIncrementalDiscovery() {
