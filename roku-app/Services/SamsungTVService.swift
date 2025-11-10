@@ -9,7 +9,7 @@ import Foundation
 import Network
 
 class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
-    private var webSocketTask: URLSessionWebSocketTask?
+    private(set) var webSocketTask: URLSessionWebSocketTask?
     private var urlSession: URLSession?
     private var pingTimer: Timer?
     
@@ -138,46 +138,57 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         
         let ports = [8002, 8001, 8080, 55000]
         
-        for port in ports {
-            print("🔔 Samsung TV Port \(port) için uyandırma isteği gönderiliyor...")
-            
-            let wakeUpURL = URL(string: "http://\(device.ipAddress):\(port)/")!
-            print("🔔 Samsung TV Uyandırma URL: \(wakeUpURL)")
-            
-            do {
-                let (_, response) = try await urlSession?.data(for: URLRequest(url: wakeUpURL)) ?? (Data(), URLResponse())
-                if let httpResponse = response as? HTTPURLResponse {
-                    print("✅ Samsung TV Uyandırma isteği başarılı - port \(port), status: \(httpResponse.statusCode)")
+        await withTaskGroup(of: Void.self) { group in
+            for port in ports {
+                group.addTask {
+                    print("🔔 Samsung TV Port \(port) için uyandırma isteği gönderiliyor...")
+                    
+                    let wakeUpURL = URL(string: "http://\(self.device.ipAddress):\(port)/")!
+                    print("🔔 Samsung TV Uyandırma URL: \(wakeUpURL)")
+                    
+                    var wakeUpRequest = URLRequest(url: wakeUpURL)
+                    wakeUpRequest.timeoutInterval = 2.0
+                    wakeUpRequest.httpMethod = "GET"
+                    
+                    do {
+                        let (_, response) = try await self.urlSession?.data(for: wakeUpRequest) ?? (Data(), URLResponse())
+                        if let httpResponse = response as? HTTPURLResponse {
+                            print("✅ Samsung TV Uyandırma isteği başarılı - port \(port), status: \(httpResponse.statusCode)")
+                        }
+                    } catch {
+                        print("❌ Samsung TV Uyandırma isteği hatası - port \(port): \(error)")
+                    }
+                    
+                    let permissionURL = URL(string: "http://\(self.device.ipAddress):\(port)/api/v2/applications")!
+                    print("🔔 Samsung TV İzin popup tetikleme URL: \(permissionURL)")
+                    
+                    var permissionRequest = URLRequest(url: permissionURL)
+                    permissionRequest.httpMethod = "POST"
+                    permissionRequest.timeoutInterval = 2.0
+                    permissionRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    permissionRequest.setValue("ArcTVRemote", forHTTPHeaderField: "User-Agent")
+                    
+                    let permissionData = [
+                        "name": "ArcTVRemote",
+                        "token": ""
+                    ] as [String : Any]
+                    
+                    do {
+                        let jsonData = try JSONSerialization.data(withJSONObject: permissionData)
+                        permissionRequest.httpBody = jsonData
+                        
+                        let (_, permissionResponse) = try await self.urlSession?.data(for: permissionRequest) ?? (Data(), URLResponse())
+                        if let httpResponse = permissionResponse as? HTTPURLResponse {
+                            print("✅ Samsung TV İzin popup tetikleme başarılı - port \(port), status: \(httpResponse.statusCode)")
+                        }
+                    } catch {
+                        print("❌ Samsung TV İzin popup tetikleme hatası - port \(port): \(error)")
+                    }
                 }
-            } catch {
-                print("❌ Samsung TV Uyandırma isteği hatası - port \(port): \(error)")
-            }
-            
-            let permissionURL = URL(string: "http://\(device.ipAddress):\(port)/api/v2/applications")!
-            print("🔔 Samsung TV İzin popup tetikleme URL: \(permissionURL)")
-            
-            var permissionRequest = URLRequest(url: permissionURL)
-            permissionRequest.httpMethod = "POST"
-            permissionRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            permissionRequest.setValue("ArcTVRemote", forHTTPHeaderField: "User-Agent")
-            
-            let permissionData = [
-                "name": "ArcTVRemote",
-                "token": ""
-            ] as [String : Any]
-            
-            do {
-                let jsonData = try JSONSerialization.data(withJSONObject: permissionData)
-                permissionRequest.httpBody = jsonData
-                
-                let (_, permissionResponse) = try await urlSession?.data(for: permissionRequest) ?? (Data(), URLResponse())
-                if let httpResponse = permissionResponse as? HTTPURLResponse {
-                    print("✅ Samsung TV İzin popup tetikleme başarılı - port \(port), status: \(httpResponse.statusCode)")
-                }
-            } catch {
-                print("❌ Samsung TV İzin popup tetikleme hatası - port \(port): \(error)")
             }
         }
+        
+        try await Task.sleep(nanoseconds: 500_000_000)
         
         print("🔔 Samsung TV uyandırma süreci tamamlandı")
     }
@@ -339,6 +350,14 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
             return "KEY_REWIND"
         case "fastforward", "fast_forward":
             return "KEY_FF"
+        case "options", "settings", "menu":
+            return "KEY_MENU"
+        case "colorsshortcut":
+            return "KEY_COLOR"
+        case "smarthub":
+            return "KEY_HOME"
+        case "caption":
+            return "KEY_CAPTION"
         default:
             return command
         }
@@ -451,8 +470,13 @@ extension SamsungTVService {
     }
     
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        print("❌ Samsung TV WebSocket bağlantısı kapandı")
+        print("❌ Samsung TV WebSocket bağlantısı kapandı - closeCode: \(closeCode)")
         isConnected = false
+        pingTimer?.invalidate()
+        pingTimer = nil
+        DispatchQueue.main.async {
+            self.delegate?.tvService(self, didDisconnect: self.device)
+        }
     }
     
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
@@ -517,15 +541,21 @@ extension SamsungTVService {
     
     private func startReceivingMessages() {
         webSocketTask?.receive { [weak self] result in
-            guard let self = self, self.isConnected else { return }
+            guard let self = self else { return }
             
             switch result {
             case .success(let message):
-                self.handleWebSocketMessage(message)
-                self.startReceivingMessages()
+                if self.isConnected {
+                    self.handleWebSocketMessage(message)
+                    self.startReceivingMessages()
+                }
             case .failure(let error):
                 print("❌ Samsung TV WebSocket mesaj alma hatası: \(error)")
                 if self.isConnected {
+                    self.isConnected = false
+                    DispatchQueue.main.async {
+                        self.delegate?.tvService(self, didDisconnect: self.device)
+                    }
                     self.handlePingError()
                 }
             }

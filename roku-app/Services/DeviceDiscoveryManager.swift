@@ -60,6 +60,11 @@ class DeviceDiscoveryManager {
     func stopDiscovery() {
         ssdpClients.forEach { $0.stop() }
         ssdpClients.removeAll()
+        
+        if discoveredDevices.isEmpty && !hasSentSearchFailAnalytics {
+            sendSearchFailAnalytics()
+        }
+        
         delegate?.didFinishDiscovery()
     }
     
@@ -272,7 +277,11 @@ extension DeviceDiscoveryManager: SSDPDiscoveryDelegate {
     
     func ssdpDiscovery(_ discovery: SSDPDiscovery, didFinishWithError error: Error) {
         print("SSDP Discovery error: \(error)")
-        sendSearchFailAnalytics()
+        
+        let devicesToCheck = isIncrementalDiscovery ? incrementalDevices : discoveredDevices
+        if devicesToCheck.isEmpty && !hasSentSearchFailAnalytics {
+            sendSearchFailAnalytics()
+        }
     }
     
     func ssdpDiscoveryDidStart(_ discovery: SSDPDiscovery) {

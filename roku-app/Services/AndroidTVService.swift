@@ -251,11 +251,11 @@ class AndroidTVService: BaseTVService, URLSessionTaskDelegate {
             return .keycodeVolumeUp
         case "volumedown":
             return .keycodeVolumeDown
-        case "volumemute":
+        case "volumemute", "mute":
             return .keycodeMute
         case "poweron", "poweroff", "power":
             return .keycodeTvPower
-        case "menu":
+        case "menu", "options", "settings":
             return .keycodeMenu
         case "backspace":
             return .keycodeDel
