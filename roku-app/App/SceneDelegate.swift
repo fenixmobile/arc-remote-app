@@ -30,6 +30,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let splashVC = navigationViewController?.topViewController as? SplashViewController {
             splashVC.appDidBecomeActive()
         }
+        checkAndReconnectSamsungTV()
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
@@ -42,11 +43,44 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let splashVC = navigationViewController?.topViewController as? SplashViewController {
             splashVC.appWillEnterForeground()
         }
+        checkAndReconnectSamsungTV()
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
         if let splashVC = navigationViewController?.topViewController as? SplashViewController {
             splashVC.appDidEnterBackground()
+        }
+    }
+    
+    private func checkAndReconnectSamsungTV() {
+        guard let device = TVServiceManager.shared.currentDevice,
+              device.brand == .samsung,
+              let service = TVServiceManager.shared.currentService as? SamsungTVService else {
+            return
+        }
+        
+        Task {
+            if !service.isConnected {
+                print("🔄 Samsung TV bağlantısı kopmuş, yeniden bağlanılıyor...")
+                do {
+                    try await service.connect()
+                } catch {
+                    print("❌ Samsung TV yeniden bağlantı hatası: \(error)")
+                    DispatchQueue.main.async {
+                        TVServiceManager.shared.currentDevice = nil
+                    }
+                }
+            } else if let webSocketTask = service.webSocketTask, webSocketTask.state != .running {
+                print("🔄 Samsung TV WebSocket durumu: \(webSocketTask.state), yeniden bağlanılıyor...")
+                do {
+                    try await service.connect()
+                } catch {
+                    print("❌ Samsung TV yeniden bağlantı hatası: \(error)")
+                    DispatchQueue.main.async {
+                        TVServiceManager.shared.currentDevice = nil
+                    }
+                }
+            }
         }
     }
 }

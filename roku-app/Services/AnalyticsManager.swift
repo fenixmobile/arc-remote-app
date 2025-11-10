@@ -17,29 +17,43 @@ class AnalyticsManager {
     
     static let shared = AnalyticsManager()
     
-    lazy var fxAnalytics: FXAnalytics = {
-        var config = FXAnalyticsConfig(analyticsServiceTypes: [
+    private let initializationQueue = DispatchQueue(label: "com.rokutv.analytics.init")
+    private var _fxAnalytics: FXAnalytics?
+    
+    var fxAnalytics: FXAnalytics {
+        if let analytics = _fxAnalytics {
+            return analytics
+        }
+        
+        return initializationQueue.sync {
+            if let analytics = _fxAnalytics {
+                return analytics
+            }
             
-            (.adjust, [.revenueEvent, .default]),
-            (.firebase, [.revenueEvent, .default]),
-            (.amplitude, [.adViewEvent, .revenueEvent, .default]),
-            (.facebook, [])
-        ])
-        
-        config.adjustAppToken = Constants.Analytics.adjustAppToken
+            var config = FXAnalyticsConfig(analyticsServiceTypes: [
+                
+                (.adjust, [.revenueEvent, .default]),
+                (.firebase, [.revenueEvent, .default]),
+                (.amplitude, [.adViewEvent, .revenueEvent, .default]),
+                (.facebook, [])
+            ])
+            
+            config.adjustAppToken = Constants.Analytics.adjustAppToken
 #if DEBUG
-        config.environment = .adjustFXEnvironmentSandbox
+            config.environment = .adjustFXEnvironmentSandbox
 #else
-        config.environment = .adjustFXEnvironmentProduction
+            config.environment = .adjustFXEnvironmentProduction
 #endif
-        config.tokenDelegate = self
-        
-        config.amplitudeApiKey = Constants.Analytics.amplitudeApiKey
-        config.amplitudeDeviceId = UIDevice.current.identifierForVendor?.uuidString ?? ""
-         
-        let analytics: FXAnalytics = FX.shared.initAnalytics(with: config)
-        return analytics
-    }()
+            config.tokenDelegate = self
+            
+            config.amplitudeApiKey = Constants.Analytics.amplitudeApiKey
+            config.amplitudeDeviceId = UIDevice.current.identifierForVendor?.uuidString ?? ""
+             
+            let analytics: FXAnalytics = FX.shared.initAnalytics(with: config)
+            _fxAnalytics = analytics
+            return analytics
+        }
+    }
 }
 
 extension AnalyticsManager: AdjustFXAnalyticsServiceTokenDelegate {

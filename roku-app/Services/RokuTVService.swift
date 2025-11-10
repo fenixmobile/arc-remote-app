@@ -63,12 +63,15 @@ class RokuTVService: BaseTVService {
             throw TVServiceError.commandFailed("Command failed")
         }
         
+        let activeApp = await getActiveApp()
+        let mappedCommand = mapToRokuCommand(command.command, activeApp: activeApp)
+        
         let url: URL
-        if isAppLaunchCommand(command.command) {
-            url = URL(string: "http://\(device.ipAddress):\(device.port)/launch/\(getAppId(for: command.command))")!
+        if isAppLaunchCommand(mappedCommand) {
+            url = URL(string: "http://\(device.ipAddress):\(device.port)/launch/\(getAppId(for: mappedCommand))")!
             print("🎮 Roku TV uygulama başlatılıyor: \(url)")
         } else {
-            url = URL(string: "http://\(device.ipAddress):\(device.port)/keypress/\(command.command)")!
+            url = URL(string: "http://\(device.ipAddress):\(device.port)/keypress/\(mappedCommand)")!
             print("🎮 Roku TV komut gönderiliyor: \(url)")
         }
         
@@ -178,6 +181,80 @@ extension RokuTVService {
         "Keyboard": "Lit",
         "Backspace": "Backspace"
     ]
+    
+    private func mapToRokuCommand(_ command: String, activeApp: String? = nil) -> String {
+        switch command.lowercased() {
+        case "ok", "select":
+            return "Select"
+        case "playpause", "play":
+            return "Play"
+        case "pause":
+            return "Pause"
+        case "rev", "rewind", "prev", "previous":
+            return "InstantReplay"
+        case "fwd", "fastforward", "next":
+            return "Fwd"
+        case "home":
+            return "Home"
+        case "back":
+            return "Back"
+        case "up":
+            return "Up"
+        case "down":
+            return "Down"
+        case "left":
+            return "Left"
+        case "right":
+            return "Right"
+        case "stop":
+            return "Stop"
+        case "volumeup":
+            return "VolumeUp"
+        case "volumedown":
+            return "VolumeDown"
+        case "volumemute", "mute":
+            return "VolumeMute"
+        case "poweron", "power":
+            return "PowerOn"
+        case "poweroff":
+            return "PowerOff"
+        case "spotify":
+            return "Spotify"
+        case "youtube":
+            return "YouTube"
+        case "netflix":
+            return "Netflix"
+        case "keyboard":
+            return "Lit"
+        case "backspace":
+            return "Backspace"
+        default:
+            return command
+        }
+    }
+    
+    private func getActiveApp() async -> String? {
+        let url = URL(string: "http://\(device.ipAddress):\(device.port)/query/active-app")!
+        
+        do {
+            let data = try await makeRequest(to: url, method: "GET")
+            let responseString = String(data: data, encoding: .utf8) ?? ""
+            return responseString
+        } catch {
+            print("❌ Roku TV aktif uygulama kontrolü hatası: \(error)")
+            return nil
+        }
+    }
+    
+    private func isVideoApp(_ appInfo: String) -> Bool {
+        let lowercased = appInfo.lowercased()
+        return lowercased.contains("837") || 
+               lowercased.contains("youtube") || 
+               lowercased.contains("12") || 
+               lowercased.contains("netflix") ||
+               lowercased.contains("22") ||
+               lowercased.contains("spotify")
+    }
     
     private func isAppLaunchCommand(_ command: String) -> Bool {
         let appCommands = ["Spotify", "YouTube", "Netflix"]
