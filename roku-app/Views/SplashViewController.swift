@@ -210,14 +210,6 @@ class SplashViewController: UIViewController {
             FX.shared.requestATT()
         }
         print("🔐 User ID set: \(userID)")
-        checkPremiumStatus()
-    }
-    
-    private func checkPremiumStatus() {
-        InAppPurchaseHelper.shared.getPremiumInfo { isPremium in
-            SessionDataManager.shared.isPremium = isPremium
-            print("🔐 Premium status: \(isPremium)")
-        }
     }
     
     func getDeviceInfo() -> PhoneDeviceInfo {

@@ -250,7 +250,7 @@ class Paywall3ViewController: UIViewController {
         paywall3ModalView.continueButton.isEnabled = false
         paywall3ModalView.closeButton.isEnabled = false
         
-        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct, paywallName: fxPaywall.name) { [weak self] result in
             DispatchQueue.main.async {
                 self?.paywall3ModalView.loadingActivityIndicatorView.stopAnimating()
                 self?.paywall3ModalView.loadingActivityIndicatorView.isHidden = true
@@ -260,7 +260,6 @@ class Paywall3ViewController: UIViewController {
                 switch result {
                 case .success(let purchaseInfo):
                     print("Paywall3ViewController: Claim offer purchase successful: \(purchaseInfo)")
-                    SessionDataManager.shared.isPremium = true
                     self?.handleNormalClose()
                 case .failure(let error):
                     print("Paywall3ViewController: Claim offer purchase failed: \(error)")
@@ -301,8 +300,6 @@ class Paywall3ViewController: UIViewController {
     }
     
     @objc func handlePurchaseCompleted() {
-        SessionDataManager.shared.isPremium = true
-        
         if placementId == "main" {
             dismiss(animated: true, completion: nil)
         } else {

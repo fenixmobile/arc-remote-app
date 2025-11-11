@@ -365,7 +365,7 @@ class Paywall2ViewController: UIViewController {
         continueButton.isEnabled = false
         closeButton.isEnabled = false
         
-        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: product) { [weak self] result in
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: product, paywallName: paywall.name) { [weak self] result in
             DispatchQueue.main.async {
                 self?.loadingActivityIndicatorView.stopAnimating()
                 self?.loadingActivityIndicatorView.isHidden = true
@@ -385,8 +385,6 @@ class Paywall2ViewController: UIViewController {
     }
     
     private func handlePurchaseSuccess() {
-        SessionDataManager.shared.isPremium = true
-        
         if placementId == "main" {
             dismiss(animated: true, completion: nil)
         } else {
@@ -493,7 +491,7 @@ class Paywall2ViewController: UIViewController {
         continueButton.isEnabled = false
         closeButton.isEnabled = false
         
-        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct, paywallName: fxPaywall.name) { [weak self] result in
             DispatchQueue.main.async {
                 self?.loadingActivityIndicatorView.stopAnimating()
                 self?.loadingActivityIndicatorView.isHidden = true
@@ -503,7 +501,6 @@ class Paywall2ViewController: UIViewController {
                 switch result {
                 case .success(let purchaseInfo):
                     print("Paywall2ViewController: Claim offer purchase successful: \(purchaseInfo)")
-                    SessionDataManager.shared.isPremium = true
                     self?.handleNormalClose()
                 case .failure(let error):
                     print("Paywall2ViewController: Claim offer purchase failed: \(error)")

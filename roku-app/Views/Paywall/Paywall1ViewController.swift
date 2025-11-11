@@ -310,8 +310,6 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     }
     
     private func handlePurchaseSuccess() {
-        SessionDataManager.shared.isPremium = true
-        
         if placementId == "main" {
             dismiss(animated: true, completion: nil)
         } else {
@@ -418,7 +416,7 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
         startFreeTrialButton.isEnabled = false
         closeButton.isEnabled = false
         
-        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct) { [weak self] result in
+        PaywallHelper.shared.purchaseProduct(placementId: placementId, product: fxProduct, paywallName: fxPaywall.name) { [weak self] result in
             DispatchQueue.main.async {
                 self?.loadingActivityIndicatorView.stopAnimating()
                 self?.loadingActivityIndicatorView.isHidden = true
@@ -428,7 +426,6 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
                 switch result {
                 case .success(let purchaseInfo):
                     print("Paywall1ViewController: Claim offer purchase successful: \(purchaseInfo)")
-                    SessionDataManager.shared.isPremium = true
                     self?.handleNormalClose()
                 case .failure(let error):
                     print("Paywall1ViewController: Claim offer purchase failed: \(error)")
@@ -519,8 +516,6 @@ class Paywall1ViewController: UIViewController, WKNavigationDelegate {
     }
     
     @objc func handlePurchaseCompleted() {
-        SessionDataManager.shared.isPremium = true
-        
         if placementId == "main" {
             dismiss(animated: true, completion: nil)
         } else {

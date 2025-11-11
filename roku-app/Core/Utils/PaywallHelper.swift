@@ -78,7 +78,7 @@ class PaywallHelper {
         loadProducts(paywall: paywall, completion: completion)
     }
     
-    func purchaseProduct(placementId: String, product: FXProduct, completion: @escaping (Result<FXPurchaseInfo, Error>) -> Void) {
+    func purchaseProduct(placementId: String, product: FXProduct, paywallName: String? = nil, completion: @escaping (Result<FXPurchaseInfo, Error>) -> Void) {
         DispatchQueue.main.async {
             if let topViewController = UIApplication.shared.windows.first?.rootViewController?.topMostViewController() {
                 self.showLoadingIndicator(on: topViewController)
@@ -92,12 +92,34 @@ class PaywallHelper {
                 switch result {
                 case .success(let purchaseInfo):
                     if let premium = purchaseInfo.info["premium"] as? Bool, premium == true {
+                        SessionDataManager.shared.isPremium = true
+                        if let paywallName = paywallName {
+                            AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_success", properties: [
+                                "paywall": paywallName,
+                                "placement": placementId,
+                                "product": product.productId
+                            ])
+                        }
                         completion(.success(purchaseInfo))
                     } else {
+                        if let paywallName = paywallName {
+                            AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_failed", properties: [
+                                "paywall": paywallName,
+                                "placement": placementId,
+                                "product": product.productId
+                            ])
+                        }
                         let error = NSError(domain: "PurchaseError", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Purchase was cancelled or failed"])
                         completion(.failure(error))
                     }
                 case .failure(let error):
+                    if let paywallName = paywallName {
+                        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_failed", properties: [
+                            "paywall": paywallName,
+                            "placement": placementId,
+                            "product": product.productId
+                        ])
+                    }
                     completion(.failure(error))
                 }
             }
@@ -107,7 +129,15 @@ class PaywallHelper {
     func restorePurchases(completion: @escaping (Result<FXPurchaseInfo, Error>) -> Void) {
         fxPurchase?.restore { result in
             DispatchQueue.main.async {
-                completion(result)
+                switch result {
+                case .success(let purchaseInfo):
+                    if let premium = purchaseInfo.info["premium"] as? Bool, premium == true {
+                        SessionDataManager.shared.isPremium = true
+                    }
+                    completion(.success(purchaseInfo))
+                case .failure(let error):
+                    completion(.failure(error))
+                }
             }
         }
     }

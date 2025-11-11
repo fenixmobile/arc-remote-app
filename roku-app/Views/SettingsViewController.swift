@@ -149,7 +149,6 @@ class SettingsViewController: UIViewController {
                 switch result {
                 case .success(let purchaseInfo):
                     print("SettingsViewController: Restore successful: \(purchaseInfo)")
-                    SessionDataManager.shared.isPremium = true
                     self?.showRestoreSuccessAlert()
                 case .failure(let error):
                     print("SettingsViewController: Restore failed: \(error)")
