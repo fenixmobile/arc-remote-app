@@ -12,6 +12,9 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
     private(set) var webSocketTask: URLSessionWebSocketTask?
     private var urlSession: URLSession?
     private var pingTimer: Timer?
+    private var connectionContinuation: CheckedContinuation<Void, Error>?
+    private var isAuthorizationRejected = false
+    private var currentConnectionId: UUID?
     
     override init(device: TVDevice) {
         super.init(device: device)
@@ -53,6 +56,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         }
         
         isConnected = false
+        isAuthorizationRejected = false
         
         let existingToken = getDeviceToken(deviceId: device.id.uuidString)
         
@@ -82,6 +86,8 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         
+        var lastError: Error?
+        
         for port in ports {
             print("🌐 Samsung TV Port \(port) için WebSocket bağlantısı kuruluyor...")
             
@@ -93,34 +99,75 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                 urlRequest.networkServiceType = .responsiveData
                 urlRequest.timeoutInterval = 60
                 
-                webSocketTask = urlSession?.webSocketTask(with: urlRequest)
-                webSocketTask?.resume()
+                let currentWebSocketTask = urlSession?.webSocketTask(with: urlRequest)
+                currentWebSocketTask?.resume()
                 
                 print("📱 Samsung TV WebSocket bağlantısı başlatıldı. TV'de izin popup'ı çıkmalı!")
                 
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                     var hasResumed = false
+                    var timeoutWorkItem: DispatchWorkItem?
+                    let connectionId = UUID()
                     
-                    let timeout = DispatchTime.now() + .seconds(60)
-                    DispatchQueue.global().asyncAfter(deadline: timeout) {
-                        guard !hasResumed else { return }
+                    self.connectionContinuation = continuation
+                    self.currentConnectionId = connectionId
+                    
+                    timeoutWorkItem = DispatchWorkItem {
+                        guard !hasResumed, self.currentConnectionId == connectionId else { return }
                         hasResumed = true
+                        self.connectionContinuation = nil
+                        self.currentConnectionId = nil
                         print("⏰ Samsung TV WebSocket bağlantı timeout - port \(port)")
                         continuation.resume(throwing: TVServiceError.connectionFailed("WebSocket bağlantı timeout - kullanıcı izin vermedi"))
                     }
                     
-                    webSocketTask?.receive { result in
-                        guard !hasResumed else { return }
-                        hasResumed = true
+                    DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(60), execute: timeoutWorkItem!)
+                    
+                    currentWebSocketTask?.receive { result in
+                        guard !hasResumed, self.currentConnectionId == connectionId else { return }
+                        timeoutWorkItem?.cancel()
                         
                         switch result {
                         case .success(let message):
                             print("✅ Samsung TV WebSocket bağlantısı açıldı (token alma) - port \(port)")
                             self.device.port = port
+                            self.webSocketTask = currentWebSocketTask
                             self.handleWebSocketMessage(message)
-                            continuation.resume()
-                            return
+                            
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                guard !hasResumed, self.currentConnectionId == connectionId else { return }
+                                
+                                if self.isAuthorizationRejected {
+                                    hasResumed = true
+                                    self.connectionContinuation = nil
+                                    self.currentConnectionId = nil
+                                    continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV izni reddedildi"))
+                                } else if self.isConnected {
+                                    hasResumed = true
+                                    self.connectionContinuation = nil
+                                    self.currentConnectionId = nil
+                                    continuation.resume()
+                                } else {
+                                    let tokenReceived = self.getDeviceToken(deviceId: self.device.id.uuidString) != nil
+                                    if tokenReceived {
+                                        hasResumed = true
+                                        self.connectionContinuation = nil
+                                        self.currentConnectionId = nil
+                                        continuation.resume()
+                                    } else {
+                                        hasResumed = true
+                                        self.connectionContinuation = nil
+                                        self.currentConnectionId = nil
+                                        continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV bağlantı doğrulanamadı"))
+                                    }
+                                }
+                            }
                         case .failure(let error):
+                            guard !hasResumed, self.currentConnectionId == connectionId else { return }
+                            hasResumed = true
+                            timeoutWorkItem?.cancel()
+                            self.connectionContinuation = nil
+                            self.currentConnectionId = nil
                             print("❌ Samsung TV WebSocket bağlantı hatası port \(port) \(webSocketURL): \(error)")
                             continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV WebSocket'e bağlanılamadı"))
                         }
@@ -130,11 +177,12 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                 return
             } catch {
                 print("❌ Samsung TV WebSocket bağlantı hatası port \(port): \(error)")
+                lastError = error
                 continue
             }
         }
         
-        throw TVServiceError.connectionFailed("Samsung TV WebSocket'e hiçbir portta bağlanılamadı")
+        throw lastError ?? TVServiceError.connectionFailed("Samsung TV WebSocket'e hiçbir portta bağlanılamadı")
     }
     
     private func wakeUpSamsungTV() async throws {
@@ -201,7 +249,12 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         let webSocketURL = createWebSocketURL(token: token, port: device.port)
         print("🌐 Samsung TV Token ile bağlantı URL: \(webSocketURL)")
         
-        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        let oldWebSocketTask = webSocketTask
+        webSocketTask = nil
+        
+        oldWebSocketTask?.cancel(with: .goingAway, reason: nil)
+        
+        try await Task.sleep(nanoseconds: 100_000_000)
         
         var urlRequest = URLRequest(url: webSocketURL)
         urlRequest.networkServiceType = .responsiveData
@@ -212,17 +265,21 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
         
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             var hasResumed = false
+            let connectionId = UUID()
+            self.connectionContinuation = continuation
+            self.currentConnectionId = connectionId
             
             let timeout = DispatchTime.now() + .seconds(60)
             DispatchQueue.global().asyncAfter(deadline: timeout) {
-                guard !hasResumed else { return }
+                guard !hasResumed, self.currentConnectionId == connectionId else { return }
                 hasResumed = true
+                self.connectionContinuation = nil
+                self.currentConnectionId = nil
                 continuation.resume(throwing: TVServiceError.connectionFailed("WebSocket bağlantı timeout"))
             }
             
             webSocketTask?.receive { result in
-                guard !hasResumed else { return }
-                hasResumed = true
+                guard !hasResumed, self.currentConnectionId == connectionId else { return }
                 
                 switch result {
                 case .success(let message):
@@ -230,13 +287,32 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                     self.handleWebSocketMessage(message)
                     self.startReceivingMessages()
                     
-                    if self.isConnected && self.webSocketTask?.state == .running {
-                        continuation.resume()
-                    } else {
-                        self.isConnected = false
-                        continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV bağlantı doğrulanamadı"))
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        guard !hasResumed, self.currentConnectionId == connectionId else { return }
+                        
+                        if self.isAuthorizationRejected {
+                            hasResumed = true
+                            self.connectionContinuation = nil
+                            self.currentConnectionId = nil
+                            continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV izni reddedildi"))
+                        } else if self.isConnected && self.webSocketTask?.state == .running {
+                            hasResumed = true
+                            self.connectionContinuation = nil
+                            self.currentConnectionId = nil
+                            continuation.resume()
+                        } else {
+                            hasResumed = true
+                            self.connectionContinuation = nil
+                            self.currentConnectionId = nil
+                            self.isConnected = false
+                            continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV bağlantı doğrulanamadı"))
+                        }
                     }
                 case .failure(let error):
+                    guard !hasResumed, self.currentConnectionId == connectionId else { return }
+                    hasResumed = true
+                    self.connectionContinuation = nil
+                    self.currentConnectionId = nil
                     print("❌ Samsung TV WebSocket bağlantı hatası \(webSocketURL): \(error)")
                     self.isConnected = false
                     continuation.resume(throwing: TVServiceError.connectionFailed("Samsung TV WebSocket'e bağlanılamadı"))
@@ -397,17 +473,43 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                             print("🔑 Samsung TV token alındı: \(token)")
                             setDeviceToken(token, deviceId: device.id.uuidString)
                             
-                            print("✅ Samsung TV izin verildi! Token ile yeniden bağlanıyor...")
-                            
-                            Task {
-                                do {
-                                    try await connectWithToken(token)
-                                    print("✅ Samsung TV token ile bağlantı başarılı!")
-                                } catch {
-                                    print("❌ Samsung TV token ile bağlantı hatası: \(error)")
-                                    isConnected = false
-                                    DispatchQueue.main.async {
-                                        self.delegate?.tvService(self, didReceiveError: error)
+                            if let continuation = connectionContinuation, currentConnectionId != nil {
+                                let cont = continuation
+                                let connectionId = currentConnectionId
+                                connectionContinuation = nil
+                                currentConnectionId = nil
+                                
+                                print("✅ Samsung TV izin verildi! İlk bağlantı tamamlanıyor, token ile yeniden bağlanıyor...")
+                                
+                                DispatchQueue.main.async {
+                                    cont.resume()
+                                }
+                                
+                                Task {
+                                    do {
+                                        try await connectWithToken(token)
+                                        print("✅ Samsung TV token ile bağlantı başarılı!")
+                                    } catch {
+                                        print("❌ Samsung TV token ile bağlantı hatası: \(error)")
+                                        isConnected = false
+                                        DispatchQueue.main.async {
+                                            self.delegate?.tvService(self, didReceiveError: error)
+                                        }
+                                    }
+                                }
+                            } else {
+                                print("✅ Samsung TV izin verildi! Token ile yeniden bağlanıyor...")
+                                
+                                Task {
+                                    do {
+                                        try await connectWithToken(token)
+                                        print("✅ Samsung TV token ile bağlantı başarılı!")
+                                    } catch {
+                                        print("❌ Samsung TV token ile bağlantı hatası: \(error)")
+                                        isConnected = false
+                                        DispatchQueue.main.async {
+                                            self.delegate?.tvService(self, didReceiveError: error)
+                                        }
                                     }
                                 }
                             }
@@ -423,9 +525,21 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                     case "ms.channel.unauthorized":
                         print("❌ Samsung TV izni reddedildi")
                         isConnected = false
+                        isAuthorizationRejected = true
                         setDeviceToken("", deviceId: device.id.uuidString)
-                        DispatchQueue.main.async {
-                            self.delegate?.tvService(self, didReceiveError: TVServiceError.connectionFailed("Samsung TV izni reddedildi"))
+                        
+                        if let continuation = connectionContinuation, currentConnectionId != nil {
+                            let cont = continuation
+                            let connectionId = currentConnectionId
+                            connectionContinuation = nil
+                            currentConnectionId = nil
+                            DispatchQueue.main.async {
+                                cont.resume(throwing: TVServiceError.connectionFailed("Samsung TV izni reddedildi"))
+                            }
+                        } else {
+                            DispatchQueue.main.async {
+                                self.delegate?.tvService(self, didReceiveError: TVServiceError.connectionFailed("Samsung TV izni reddedildi"))
+                            }
                         }
                     case "ms.channel.timeOut":
                         print("⏰ Samsung TV channel timeout - bağlantı korunuyor")
