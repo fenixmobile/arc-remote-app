@@ -15,13 +15,15 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
     private var connectionContinuation: CheckedContinuation<Void, Error>?
     private var isAuthorizationRejected = false
     private var currentConnectionId: UUID?
+    private var shouldAutoReconnect = true
     
     override init(device: TVDevice) {
         super.init(device: device)
         
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 120
+        config.timeoutIntervalForResource = 300
+        config.allowsCellularAccess = false
         
         config.urlCredentialStorage = nil
         config.httpCookieStorage = nil
@@ -55,6 +57,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
             return
         }
         
+        shouldAutoReconnect = true
         isConnected = false
         isAuthorizationRejected = false
         
@@ -146,6 +149,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                                     hasResumed = true
                                     self.connectionContinuation = nil
                                     self.currentConnectionId = nil
+                                    self.shouldAutoReconnect = true
                                     continuation.resume()
                                 } else {
                                     let tokenReceived = self.getDeviceToken(deviceId: self.device.id.uuidString) != nil
@@ -299,6 +303,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                             hasResumed = true
                             self.connectionContinuation = nil
                             self.currentConnectionId = nil
+                            self.shouldAutoReconnect = true
                             continuation.resume()
                         } else {
                             hasResumed = true
@@ -441,6 +446,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
     }
     
     override func disconnect() {
+        shouldAutoReconnect = false
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         pingTimer?.invalidate()
         pingTimer = nil
@@ -517,6 +523,7 @@ class SamsungTVService: BaseTVService, URLSessionWebSocketDelegate {
                             print("✅ Samsung TV channel connect eventi alındı (token ile bağlantı)")
                             if !isConnected {
                                 isConnected = true
+                                shouldAutoReconnect = true
                                 DispatchQueue.main.async {
                                     self.delegate?.tvService(self, didConnect: self.device)
                                 }
@@ -612,8 +619,26 @@ extension SamsungTVService {
         isConnected = false
         pingTimer?.invalidate()
         pingTimer = nil
-        DispatchQueue.main.async {
-            self.delegate?.tvService(self, didDisconnect: self.device)
+        
+        if shouldAutoReconnect {
+            print("🔄 Samsung TV WebSocket kapandı, otomatik yeniden bağlanma başlatılıyor...")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                Task {
+                    do {
+                        try await self.connect()
+                        print("✅ Samsung TV otomatik yeniden bağlantı başarılı")
+                    } catch {
+                        print("❌ Samsung TV otomatik yeniden bağlantı hatası: \(error)")
+                        DispatchQueue.main.async {
+                            self.delegate?.tvService(self, didDisconnect: self.device)
+                        }
+                    }
+                }
+            }
+        } else {
+            DispatchQueue.main.async {
+                self.delegate?.tvService(self, didDisconnect: self.device)
+            }
         }
     }
     
@@ -660,12 +685,12 @@ extension SamsungTVService {
     }
     
     private func handlePingError() {
-        guard isConnected else { return }
+        guard isConnected, shouldAutoReconnect else { return }
         
         print("🔄 Samsung TV ping hatası nedeniyle bağlantı kontrol ediliyor...")
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            guard self.isConnected else { return }
+            guard self.isConnected, self.shouldAutoReconnect else { return }
             
             Task {
                 do {
@@ -691,10 +716,27 @@ extension SamsungTVService {
                 print("❌ Samsung TV WebSocket mesaj alma hatası: \(error)")
                 if self.isConnected {
                     self.isConnected = false
-                    DispatchQueue.main.async {
-                        self.delegate?.tvService(self, didDisconnect: self.device)
+                    
+                    if self.shouldAutoReconnect {
+                        print("🔄 Samsung TV mesaj alma hatası, otomatik yeniden bağlanma başlatılıyor...")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            Task {
+                                do {
+                                    try await self.connect()
+                                    print("✅ Samsung TV otomatik yeniden bağlantı başarılı")
+                                } catch {
+                                    print("❌ Samsung TV otomatik yeniden bağlantı hatası: \(error)")
+                                    DispatchQueue.main.async {
+                                        self.delegate?.tvService(self, didDisconnect: self.device)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self.delegate?.tvService(self, didDisconnect: self.device)
+                        }
                     }
-                    self.handlePingError()
                 }
             }
         }

@@ -60,18 +60,31 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
         
         Task {
-            if !service.isConnected {
-                print("🔄 Samsung TV bağlantısı kopmuş, yeniden bağlanılıyor...")
-                do {
-                    try await service.connect()
-                } catch {
-                    print("❌ Samsung TV yeniden bağlantı hatası: \(error)")
-                    DispatchQueue.main.async {
-                        TVServiceManager.shared.currentDevice = nil
+            if let webSocketTask = service.webSocketTask {
+                let state = webSocketTask.state
+                if state == .canceling || state == .completed {
+                    print("🔄 Samsung TV WebSocket durumu: \(state), yeniden bağlanılıyor...")
+                    do {
+                        try await service.connect()
+                    } catch {
+                        print("❌ Samsung TV yeniden bağlantı hatası: \(error)")
+                        DispatchQueue.main.async {
+                            TVServiceManager.shared.currentDevice = nil
+                        }
+                    }
+                } else if !service.isConnected && state == .running {
+                    print("🔄 Samsung TV bağlantı durumu tutarsız, yeniden bağlanılıyor...")
+                    do {
+                        try await service.connect()
+                    } catch {
+                        print("❌ Samsung TV yeniden bağlantı hatası: \(error)")
+                        DispatchQueue.main.async {
+                            TVServiceManager.shared.currentDevice = nil
+                        }
                     }
                 }
-            } else if let webSocketTask = service.webSocketTask, webSocketTask.state != .running {
-                print("🔄 Samsung TV WebSocket durumu: \(webSocketTask.state), yeniden bağlanılıyor...")
+            } else if !service.isConnected {
+                print("🔄 Samsung TV bağlantısı kopmuş, yeniden bağlanılıyor...")
                 do {
                     try await service.connect()
                 } catch {

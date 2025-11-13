@@ -112,6 +112,11 @@ class TVRemoteViewController: UIViewController, UITextFieldDelegate {
         
         if TVServiceManager.shared.currentDevice == nil {
             TVServiceManager.shared.connectToStoredDevice()
+        } else {
+            if TVServiceManager.shared.lastConnectedDevice?.id != TVServiceManager.shared.currentDevice?.id {
+                TVServiceManager.shared.lastConnectedDevice = TVServiceManager.shared.currentDevice
+            }
+            updateConnectionStatus(TVServiceManager.shared.currentDevice)
         }
     }
     
