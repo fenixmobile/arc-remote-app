@@ -226,11 +226,13 @@ class Paywall3ViewController: UIViewController {
         
         let notNowAction = UIAlertAction(title: "Not now", style: .default) { _ in
             print("Paywall3ViewController: User tapped 'Not now' - closing all paywalls")
+            AnalyticsManager.shared.fxAnalytics.send(event: "offer_popup_not_now")
             self.handleNormalClose()
         }
         
         let claimOfferAction = UIAlertAction(title: "Claim Offer", style: .default) { _ in
             print("Paywall3ViewController: User tapped 'Claim Offer' - attempting purchase")
+            AnalyticsManager.shared.fxAnalytics.send(event: "offer_popup_claim_offer")
             self.handleClaimOfferPurchase()
         }
         
@@ -243,6 +245,12 @@ class Paywall3ViewController: UIViewController {
     private func handleClaimOfferPurchase() {
         guard let fxPaywall = fxPaywall,
               let fxProduct = fxPaywall.products?.first else { return }
+        
+        AnalyticsManager.shared.fxAnalytics.send(event: "paywall_purchaseProcess_start", properties: [
+            "paywall": fxPaywall.name,
+            "placement": placementId,
+            "product": fxProduct.productId
+        ])
         
         paywall3ModalView.loadingActivityIndicatorView.startAnimating()
         paywall3ModalView.loadingActivityIndicatorView.isHidden = false

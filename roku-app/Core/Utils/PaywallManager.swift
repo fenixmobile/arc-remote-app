@@ -138,11 +138,13 @@ class PaywallManager {
         
         let notNowAction = UIAlertAction(title: "Not now", style: .default) { _ in
             print("PaywallManager: User tapped 'Not now' - closing all paywalls and navigating to main")
+            AnalyticsManager.shared.fxAnalytics.send(event: "offer_popup_not_now")
             self.dismissAllPaywallsAndNavigateToMain(from: viewController, completion: completion)
         }
         
         let claimOfferAction = UIAlertAction(title: "Claim Offer", style: .default) { _ in
             print("PaywallManager: User tapped 'Claim Offer' - attempting purchase")
+            AnalyticsManager.shared.fxAnalytics.send(event: "offer_popup_claim_offer")
             self.handleClaimOfferPurchase(from: viewController, paywall: paywall, placementId: placementId, completion: completion)
         }
         
